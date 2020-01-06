@@ -38,9 +38,9 @@
 #define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_FABRIC, __VA_ARGS__)
 
 int zhpe_offloaded_pe_waittime = ZHPE_OFFLOADED_PE_WAITTIME;
-const char zhpe_offloaded_fab_name[] = "zhpe_offloaded_offloaded";
-const char zhpe_offloaded_dom_name[] = "zhpe_offloaded_offloaded";
-const char zhpe_offloaded_prov_name[] = "zhpe_offloaded_offloaded";
+const char zhpe_offloaded_fab_name[] = "zhpe_offloaded";
+const char zhpe_offloaded_dom_name[] = "zhpe_offloaded";
+const char zhpe_offloaded_prov_name[] = "zhpe_offloaded";
 int zhpe_offloaded_conn_retry = ZHPE_OFFLOADED_CM_DEF_RETRY;
 int zhpe_offloaded_cm_def_map_sz = ZHPE_OFFLOADED_CMAP_DEF_SZ;
 int zhpe_offloaded_av_def_sz = ZHPE_OFFLOADED_AV_DEF_SZ;
@@ -326,7 +326,7 @@ static int zhpe_offloaded_fabric_close(fid_t fid)
 static int zhpe_offloaded_fabric_ext_lookup(const char *url, void **sa, size_t *sa_len)
 {
 	int			ret = -FI_EINVAL;
-	const char		fam_pfx[] = "zhpe_offloaded_offloaded:///fam";
+	const char		fam_pfx[] = "zhpe_offloaded:///fam";
 	const size_t		fam_pfx_len = strlen(fam_pfx);
 	const char		*p = url;
 	struct sockaddr_zhpe	*sz;

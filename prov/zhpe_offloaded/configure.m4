@@ -11,17 +11,17 @@ AC_DEFUN([FI_ZHPE_OFFLOADED_CONFIGURE],
 [
   # Determine if we can support the zhpe provider
   zhpe_offloaded_happy=0
-  AS_IF([test x"$enable_zhpe" != x"no"],
+  AS_IF([test x"$enable_zhpe_offloaded" != x"no"],
   [
     # Set up zhpe-support paths
     zhpe_offloaded_happy=1
-    FI_CHECK_PACKAGE([zhpe], [zhpeq.h], [zhpeq], [zhpeq_alloc], [],
+    FI_CHECK_PACKAGE([zhpe_offloaded], [zhpeq.h], [zhpeq], [zhpeq_alloc], [],
                      [$zhpe_offloaded_PREFIX], [$zhpe_offloaded_LIBDIR],, [zhpe_offloaded_happy=0])
     # Build with Carbon stats support
     AC_ARG_WITH(
-      [zhpe-sim-stats],
+      [zhpe_offloaded-sim-stats],
       [AS_HELP_STRING(
-        [--with-zhpe-sim-stats],
+        [--with-zhpe_offloaded-sim-stats],
         [Build with simulator stats support])],
       [
 	zhpe_offloaded_CPPFLAGS="$zhpe_offloaded_CPPFLAGS -DHAVE_ZHPE_OFFLOADED_STATS"
