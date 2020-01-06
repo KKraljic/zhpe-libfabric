@@ -47,8 +47,8 @@ endif !HAVE_ZHPE_OFFLOADED_DL
 AM_LDFLAGS += $(zhpe_offloaded_LDFLAGS) $(zhpe_offloaded_LIBS)
 
 rdmainclude_HEADERS += \
-	prov/zhpe/include/fi_ext_zhpe.h
+	prov/zhpe_offloaded/include/fi_ext_zhpe_offloaded.h
 
-#prov_install_man_pages += man/man7/fi_zhpe.7
+#prov_install_man_pages += man/man7/fi_zhpe_offloaded.7
 
 endif HAVE_ZHPE_OFFLOADED
