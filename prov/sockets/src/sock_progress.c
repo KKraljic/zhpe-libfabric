@@ -820,7 +820,7 @@ static int sock_pe_process_rx_write(struct sock_pe *pe,
 	rem = pe_entry->msg_hdr.msg_len - len;
 	for (i = 0; rem > 0 && i < pe_entry->msg_hdr.dest_iov_len; i++) {
 		/*
-		 * HACK: zhpe command writes are cache-aligned and fit it
+		 * HACK: zhpe_offloaded command writes are cache-aligned and fit it
 		 * in a cache-line. Intercept anything that looks like that.
 		 */
 		void *iov_addr =

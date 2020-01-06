@@ -33,14 +33,14 @@
 
 #include <zhpe.h>
 
-#define ZHPE_LOG_DBG(...) _ZHPE_LOG_DBG(FI_LOG_EP_CTRL, __VA_ARGS__)
-#define ZHPE_LOG_ERROR(...) _ZHPE_LOG_ERROR(FI_LOG_EP_CTRL, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_EP_CTRL, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_EP_CTRL, __VA_ARGS__)
 
-struct zhpe_rx_ctx *zhpe_rx_ctx_alloc(const struct fi_rx_attr *attr,
-				      void *context, struct zhpe_domain *domain)
+struct zhpe_offloaded_rx_ctx *zhpe_offloaded_rx_ctx_alloc(const struct fi_rx_attr *attr,
+				      void *context, struct zhpe_offloaded_domain *domain)
 {
 	int			rc;
-	struct zhpe_rx_ctx	*rx_ctx;
+	struct zhpe_offloaded_rx_ctx	*rx_ctx;
 
 	rx_ctx = calloc_cachealigned(1, sizeof(*rx_ctx));
 	if (!rx_ctx)
@@ -64,26 +64,26 @@ struct zhpe_rx_ctx *zhpe_rx_ctx_alloc(const struct fi_rx_attr *attr,
 
 	rx_ctx->domain = domain;
 	rc = util_buf_pool_create(&rx_ctx->rx_user_free.rx_entry_pool,
-				  sizeof(struct zhpe_rx_entry), L1_CACHE_BYTES,
+				  sizeof(struct zhpe_offloaded_rx_entry), L1_CACHE_BYTES,
 				  0, 64);
 	if (rc < 0) {
 		rx_ctx->rx_user_free.rx_entry_pool = NULL;
-		ZHPE_LOG_ERROR("util_buf_pool_create() error %d\n", rc);
+		ZHPE_OFFLOADED_LOG_ERROR("util_buf_pool_create() error %d\n", rc);
 		goto err;
 	}
 	rc = util_buf_pool_create(&rx_ctx->rx_prog_free.rx_entry_pool,
-				  sizeof(struct zhpe_rx_entry), L1_CACHE_BYTES,
+				  sizeof(struct zhpe_offloaded_rx_entry), L1_CACHE_BYTES,
 				  0, 64);
 	if (rc < 0) {
 		rx_ctx->rx_prog_free.rx_entry_pool = NULL;
-		ZHPE_LOG_ERROR("util_buf_pool_create() error %d\n", rc);
+		ZHPE_OFFLOADED_LOG_ERROR("util_buf_pool_create() error %d\n", rc);
 		goto err;
 	}
 	if (attr->total_buffered_recv > 0) {
-		rc = zhpe_slab_init(&rx_ctx->eager, attr->total_buffered_recv,
+		rc = zhpe_offloaded_slab_init(&rx_ctx->eager, attr->total_buffered_recv,
 				    domain);
 		if (rc < 0) {
-			ZHPE_LOG_ERROR("zhpe_slab_init(%Lu) error %d\n",
+			ZHPE_OFFLOADED_LOG_ERROR("zhpe_offloaded_slab_init(%Lu) error %d\n",
 				       (ullong)attr->total_buffered_recv, rc);
 			goto err;
 		}
@@ -92,59 +92,59 @@ struct zhpe_rx_ctx *zhpe_rx_ctx_alloc(const struct fi_rx_attr *attr,
 	return rx_ctx;
  err:
 	if (rx_ctx)
-		zhpe_rx_ctx_free(rx_ctx);
+		zhpe_offloaded_rx_ctx_free(rx_ctx);
 	return NULL;
 }
 
-void zhpe_rx_ctx_free(struct zhpe_rx_ctx *rx_ctx)
+void zhpe_offloaded_rx_ctx_free(struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
-	struct zhpe_rx_entry	*rx_entry;
+	struct zhpe_offloaded_rx_entry	*rx_entry;
 	struct zhpeu_atm_list_next *next;
 
 	/* FIXME: More to do. */
 	while (!dlist_empty(&rx_ctx->rx_posted_list)) {
 		dlist_pop_front(&rx_ctx->rx_posted_list,
-				struct zhpe_rx_entry, rx_entry, lentry);
+				struct zhpe_offloaded_rx_entry, rx_entry, lentry);
 		dlist_init(&rx_entry->lentry);
-		zhpe_rx_release_entry(rx_entry);
+		zhpe_offloaded_rx_release_entry(rx_entry);
 	}
 	while (!dlist_empty(&rx_ctx->rx_buffered_list)) {
 		dlist_pop_front(&rx_ctx->rx_buffered_list,
-				struct zhpe_rx_entry, rx_entry, lentry);
+				struct zhpe_offloaded_rx_entry, rx_entry, lentry);
 		dlist_init(&rx_entry->lentry);
-		zhpe_rx_release_entry(rx_entry);
+		zhpe_offloaded_rx_release_entry(rx_entry);
 	}
 	while (!dlist_empty(&rx_ctx->rx_work_list)) {
 		dlist_pop_front(&rx_ctx->rx_work_list,
-				struct zhpe_rx_entry, rx_entry, lentry);
+				struct zhpe_offloaded_rx_entry, rx_entry, lentry);
 		dlist_init(&rx_entry->lentry);
-		zhpe_rx_release_entry(rx_entry);
+		zhpe_offloaded_rx_release_entry(rx_entry);
 	}
 	while ((next = zhpeu_atm_fifo_pop(&rx_ctx->rx_user_free.rx_fifo_list)))
 	{
-		rx_entry = container_of(next, struct zhpe_rx_entry,
+		rx_entry = container_of(next, struct zhpe_offloaded_rx_entry,
 					rx_match_next);
 		util_buf_release(rx_ctx->rx_user_free.rx_entry_pool, rx_entry);
 	}
 	while ((next = zhpeu_atm_fifo_pop(&rx_ctx->rx_prog_free.rx_fifo_list)))
 	{
-		rx_entry = container_of(next, struct zhpe_rx_entry,
+		rx_entry = container_of(next, struct zhpe_offloaded_rx_entry,
 					rx_match_next);
 		util_buf_release(rx_ctx->rx_prog_free.rx_entry_pool, rx_entry);
 	}
 
 	util_buf_pool_destroy(rx_ctx->rx_user_free.rx_entry_pool);
 	util_buf_pool_destroy(rx_ctx->rx_prog_free.rx_entry_pool);
-	zhpe_slab_destroy(&rx_ctx->eager);
+	zhpe_offloaded_slab_destroy(&rx_ctx->eager);
 	mutex_destroy(&rx_ctx->mutex);
 
 	free(rx_ctx);
 }
 
-static struct zhpe_tx_ctx *zhpe_tx_context_alloc(const struct fi_tx_attr *attr,
+static struct zhpe_offloaded_tx_ctx *zhpe_offloaded_tx_context_alloc(const struct fi_tx_attr *attr,
 						 void *context)
 {
-	struct zhpe_tx_ctx	*tx_ctx;
+	struct zhpe_offloaded_tx_ctx	*tx_ctx;
 
 	tx_ctx = calloc_cachealigned(1, sizeof(*tx_ctx));
 	if (!tx_ctx)
@@ -162,13 +162,13 @@ static struct zhpe_tx_ctx *zhpe_tx_context_alloc(const struct fi_tx_attr *attr,
 	return tx_ctx;
 };
 
-struct zhpe_tx_ctx *zhpe_tx_ctx_alloc(const struct fi_tx_attr *attr,
+struct zhpe_offloaded_tx_ctx *zhpe_offloaded_tx_ctx_alloc(const struct fi_tx_attr *attr,
 				      void *context)
 {
-	return zhpe_tx_context_alloc(attr, context);
+	return zhpe_offloaded_tx_context_alloc(attr, context);
 }
 
-void zhpe_tx_ctx_free(struct zhpe_tx_ctx *tx_ctx)
+void zhpe_offloaded_tx_ctx_free(struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
 	mutex_destroy(&tx_ctx->mutex);
 	free(tx_ctx);

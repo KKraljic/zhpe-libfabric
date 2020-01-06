@@ -33,18 +33,18 @@
 
 #include <zhpe.h>
 
-#define ZHPE_LOG_DBG(...) _ZHPE_LOG_DBG(FI_LOG_CORE, __VA_ARGS__)
-#define ZHPE_LOG_ERROR(...) _ZHPE_LOG_ERROR(FI_LOG_CORE, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_CORE, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_CORE, __VA_ARGS__)
 
-static int zhpe_poll_add(struct fid_poll *pollset, struct fid *event_fid,
+static int zhpe_offloaded_poll_add(struct fid_poll *pollset, struct fid *event_fid,
 			 uint64_t flags)
 {
-	struct zhpe_poll *poll;
-	struct zhpe_fid_list *list_item;
-	struct zhpe_cq *cq;
-	struct zhpe_cntr *cntr;
+	struct zhpe_offloaded_poll *poll;
+	struct zhpe_offloaded_fid_list *list_item;
+	struct zhpe_offloaded_cq *cq;
+	struct zhpe_offloaded_cntr *cntr;
 
-	poll = container_of(pollset, struct zhpe_poll, poll_fid);
+	poll = container_of(pollset, struct zhpe_offloaded_poll, poll_fid);
 	list_item = calloc(1, sizeof(*list_item));
 	if (!list_item)
 		return -FI_ENOMEM;
@@ -55,18 +55,18 @@ static int zhpe_poll_add(struct fid_poll *pollset, struct fid *event_fid,
 	switch (list_item->fid->fclass) {
 
 	case FI_CLASS_CQ:
-		cq = container_of(list_item->fid, struct zhpe_cq, cq_fid.fid);
+		cq = container_of(list_item->fid, struct zhpe_offloaded_cq, cq_fid.fid);
 		atm_inc(&cq->ref);
 		break;
 
 	case FI_CLASS_CNTR:
-		cntr = container_of(list_item->fid, struct zhpe_cntr,
+		cntr = container_of(list_item->fid, struct zhpe_offloaded_cntr,
 				    cntr_fid.fid);
 		atm_inc(&cntr->ref);
 		break;
 
 	default:
-		ZHPE_LOG_ERROR("Invalid fid class\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid fid class\n");
 		return -FI_EINVAL;
 
 	}
@@ -74,32 +74,32 @@ static int zhpe_poll_add(struct fid_poll *pollset, struct fid *event_fid,
 	return 0;
 }
 
-static int zhpe_poll_del(struct fid_poll *pollset, struct fid *event_fid,
+static int zhpe_offloaded_poll_del(struct fid_poll *pollset, struct fid *event_fid,
 			 uint64_t flags)
 {
-	struct zhpe_poll *poll;
-	struct zhpe_fid_list *list_item;
-	struct zhpe_cq *cq;
-	struct zhpe_cntr *cntr;
+	struct zhpe_offloaded_poll *poll;
+	struct zhpe_offloaded_fid_list *list_item;
+	struct zhpe_offloaded_cq *cq;
+	struct zhpe_offloaded_cntr *cntr;
 
-	poll = container_of(pollset, struct zhpe_poll, poll_fid);
-	dlist_foreach_container(&poll->fid_list, struct zhpe_fid_list,
+	poll = container_of(pollset, struct zhpe_offloaded_poll, poll_fid);
+	dlist_foreach_container(&poll->fid_list, struct zhpe_offloaded_fid_list,
 				list_item, lentry) {
 		if (list_item->fid == event_fid) {
 			switch (list_item->fid->fclass) {
 			case FI_CLASS_CQ:
 				cq = container_of(list_item->fid,
-						  struct zhpe_cq, cq_fid.fid);
+						  struct zhpe_offloaded_cq, cq_fid.fid);
 				atm_dec(&cq->ref);
 				break;
 			case FI_CLASS_CNTR:
 				cntr = container_of(list_item->fid,
-						    struct zhpe_cntr,
+						    struct zhpe_offloaded_cntr,
 						    cntr_fid.fid);
 				atm_dec(&cntr->ref);
 				break;
 			default:
-				ZHPE_LOG_ERROR("Invalid fid class\n");
+				ZHPE_OFFLOADED_LOG_ERROR("Invalid fid class\n");
 				break;
 			}
 			dlist_remove(&list_item->lentry);
@@ -110,24 +110,24 @@ static int zhpe_poll_del(struct fid_poll *pollset, struct fid *event_fid,
 	return 0;
 }
 
-static int zhpe_poll_poll(struct fid_poll *pollset, void **context, int count)
+static int zhpe_offloaded_poll_poll(struct fid_poll *pollset, void **context, int count)
 {
-	struct zhpe_poll *poll;
-	struct zhpe_cq *cq;
-	struct zhpe_eq *eq;
-	struct zhpe_cntr *cntr;
-	struct zhpe_fid_list *list_item;
+	struct zhpe_offloaded_poll *poll;
+	struct zhpe_offloaded_cq *cq;
+	struct zhpe_offloaded_eq *eq;
+	struct zhpe_offloaded_cntr *cntr;
+	struct zhpe_offloaded_fid_list *list_item;
 	int ret_count = 0;
 
-	poll = container_of(pollset, struct zhpe_poll, poll_fid);
+	poll = container_of(pollset, struct zhpe_offloaded_poll, poll_fid);
 
-	dlist_foreach_container(&poll->fid_list, struct zhpe_fid_list,
+	dlist_foreach_container(&poll->fid_list, struct zhpe_offloaded_fid_list,
 				list_item, lentry) {
 		switch (list_item->fid->fclass) {
 		case FI_CLASS_CQ:
-			cq = container_of(list_item->fid, struct zhpe_cq,
+			cq = container_of(list_item->fid, struct zhpe_offloaded_cq,
 						cq_fid.fid);
-			zhpe_cq_progress(cq);
+			zhpe_offloaded_cq_progress(cq);
 			fastlock_acquire(&cq->lock);
 			if (ofi_rbfdused(&cq->cq_rbfd) ||
 			    ofi_rbused(&cq->cqerr_rb)) {
@@ -138,9 +138,9 @@ static int zhpe_poll_poll(struct fid_poll *pollset, void **context, int count)
 			break;
 
 		case FI_CLASS_CNTR:
-			cntr = container_of(list_item->fid, struct zhpe_cntr,
+			cntr = container_of(list_item->fid, struct zhpe_offloaded_cntr,
 					    cntr_fid.fid);
-			zhpe_cntr_progress(cntr);
+			zhpe_offloaded_cntr_progress(cntr);
 			mutex_lock(&cntr->mut);
 			if (atm_load_rlx(&cntr->value) !=
 			    atm_load_rlx(&cntr->last_read_val)) {
@@ -153,7 +153,7 @@ static int zhpe_poll_poll(struct fid_poll *pollset, void **context, int count)
 			break;
 
 		case FI_CLASS_EQ:
-			eq = container_of(list_item->fid, struct zhpe_eq,
+			eq = container_of(list_item->fid, struct zhpe_offloaded_eq,
 					  eq.fid);
 			fastlock_acquire(&eq->lock);
 			if (!dlistfd_empty(&eq->list) ||
@@ -172,19 +172,19 @@ static int zhpe_poll_poll(struct fid_poll *pollset, void **context, int count)
 	return ret_count;
 }
 
-static int zhpe_poll_close(fid_t fid)
+static int zhpe_offloaded_poll_close(fid_t fid)
 {
-	struct zhpe_poll *poll;
+	struct zhpe_offloaded_poll *poll;
 	struct fid_list_entry *list_item;
 	struct dlist_entry *p, *head;
 
-	poll = container_of(fid, struct zhpe_poll, poll_fid.fid);
+	poll = container_of(fid, struct zhpe_offloaded_poll, poll_fid.fid);
 
 	head = &poll->fid_list;
 	while (!dlist_empty(head)) {
 		p = head->next;
 		list_item = container_of(p, struct fid_list_entry, entry);
-		zhpe_poll_del(&poll->poll_fid, list_item->fid, 0);
+		zhpe_offloaded_poll_del(&poll->poll_fid, list_item->fid, 0);
 	}
 
 	atm_dec(&poll->domain->ref);
@@ -192,38 +192,38 @@ static int zhpe_poll_close(fid_t fid)
 	return 0;
 }
 
-static struct fi_ops zhpe_poll_fi_ops = {
+static struct fi_ops zhpe_offloaded_poll_fi_ops = {
 	.size = sizeof(struct fi_ops),
-	.close = zhpe_poll_close,
+	.close = zhpe_offloaded_poll_close,
 	.bind = fi_no_bind,
 	.control = fi_no_control,
 	.ops_open = fi_no_ops_open,
 };
 
-static struct fi_ops_poll zhpe_poll_ops = {
+static struct fi_ops_poll zhpe_offloaded_poll_ops = {
 	.size = sizeof(struct fi_ops_poll),
-	.poll = zhpe_poll_poll,
-	.poll_add = zhpe_poll_add,
-	.poll_del = zhpe_poll_del,
+	.poll = zhpe_offloaded_poll_poll,
+	.poll_add = zhpe_offloaded_poll_add,
+	.poll_del = zhpe_offloaded_poll_del,
 };
 
-static int zhpe_poll_verify_attr(struct fi_poll_attr *attr)
+static int zhpe_offloaded_poll_verify_attr(struct fi_poll_attr *attr)
 {
 	if (attr->flags)
 		return -FI_ENODATA;
 	return 0;
 }
 
-int zhpe_poll_open(struct fid_domain *domain, struct fi_poll_attr *attr,
+int zhpe_offloaded_poll_open(struct fid_domain *domain, struct fi_poll_attr *attr,
 		   struct fid_poll **pollset)
 {
-	struct zhpe_domain *dom;
-	struct zhpe_poll *poll;
+	struct zhpe_offloaded_domain *dom;
+	struct zhpe_offloaded_poll *poll;
 
-	if (attr && zhpe_poll_verify_attr(attr))
+	if (attr && zhpe_offloaded_poll_verify_attr(attr))
 		return -FI_EINVAL;
 
-	dom = container_of(domain, struct zhpe_domain, dom_fid);
+	dom = container_of(domain, struct zhpe_offloaded_domain, dom_fid);
 	poll = calloc(1, sizeof(*poll));
 	if (!poll)
 		return -FI_ENOMEM;
@@ -231,8 +231,8 @@ int zhpe_poll_open(struct fid_domain *domain, struct fi_poll_attr *attr,
 	dlist_init(&poll->fid_list);
 	poll->poll_fid.fid.fclass = FI_CLASS_POLL;
 	poll->poll_fid.fid.context = 0;
-	poll->poll_fid.fid.ops = &zhpe_poll_fi_ops;
-	poll->poll_fid.ops = &zhpe_poll_ops;
+	poll->poll_fid.fid.ops = &zhpe_offloaded_poll_fi_ops;
+	poll->poll_fid.ops = &zhpe_offloaded_poll_ops;
 	poll->domain = dom;
 	atm_inc(&dom->ref);
 

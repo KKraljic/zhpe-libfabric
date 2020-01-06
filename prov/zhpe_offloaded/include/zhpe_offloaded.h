@@ -94,7 +94,7 @@
 
 #include <zhpeq.h>
 #include <zhpeq_util.h>
-#include <fi_ext_zhpe.h>
+#include "fi_ext_zhpe_offloaded.h"
 
 #include <zhpe_stats.h>
 

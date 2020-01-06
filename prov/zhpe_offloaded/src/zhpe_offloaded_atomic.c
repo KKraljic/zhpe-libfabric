@@ -31,12 +31,12 @@
  * SOFTWARE.
  */
 
-#include <zhpe.h>
+#include <zhpe_offlaoded.h>
 
-#define ZHPE_LOG_DBG(...) _ZHPE_LOG_DBG(FI_LOG_EP_DATA, __VA_ARGS__)
-#define ZHPE_LOG_ERROR(...) _ZHPE_LOG_ERROR(FI_LOG_EP_DATA, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_EP_DATA, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_EP_DATA, __VA_ARGS__)
 
-ssize_t zhpe_do_tx_atomic(struct fid_ep *ep,
+ssize_t zhpe_offloaded_do_tx_atomic(struct fid_ep *ep,
 			  const struct fi_msg_atomic *msg,
 			  const struct fi_ioc *comparev, void **compare_desc,
 			  size_t compare_count, struct fi_ioc *resultv,
@@ -45,17 +45,17 @@ ssize_t zhpe_do_tx_atomic(struct fid_ep *ep,
 {
 	ssize_t			ret = -FI_EINVAL;
 	int64_t			tindex = -1;
-	struct zhpe_msg_hdr	hdr = { .op_type = ZHPE_OP_ATOMIC };
-	struct zhpe_pe_entry	*pe_entry;
-	struct zhpe_msg_hdr	*zhdr;
-	union zhpe_msg_payload	*zpay;
+	struct zhpe_offloaded_msg_hdr	hdr = { .op_type = ZHPE_OFFLOADED_OP_ATOMIC };
+	struct zhpe_offloaded_pe_entry	*pe_entry;
+	struct zhpe_offloaded_msg_hdr	*zhdr;
+	union zhpe_offloaded_msg_payload	*zpay;
 	uint64_t		lzaddr;
-	struct zhpe_conn	*conn;
-	struct zhpe_tx_ctx	*tx_ctx;
+	struct zhpe_offloaded_conn	*conn;
+	struct zhpe_offloaded_tx_ctx	*tx_ctx;
 	uint64_t		op_flags;
-	struct zhpe_ep		*zhpe_ep;
-	struct zhpe_ep_attr	*ep_attr;
-	struct zhpe_mr		*zmr;
+	struct zhpe_offloaded_ep		*zhpe_offloaded_ep;
+	struct zhpe_offloaded_ep_attr	*ep_attr;
+	struct zhpe_offloaded_mr		*zmr;
 	size_t			datasize;
 	void			*vaddr;
 	size_t			cmd_len;
@@ -67,18 +67,18 @@ ssize_t zhpe_do_tx_atomic(struct fid_ep *ep,
 	switch (ep->fid.fclass) {
 
 	case FI_CLASS_EP:
-		zhpe_ep = container_of(ep, struct zhpe_ep, ep);
-		tx_ctx = zhpe_ep->attr->tx_ctx;
-		ep_attr = zhpe_ep->attr;
-		op_flags = zhpe_ep->tx_attr.op_flags;
+		zhpe_offloaded_ep = container_of(ep, struct zhpe_offloaded_ep, ep);
+		tx_ctx = zhpe_offloaded_ep->attr->tx_ctx;
+		ep_attr = zhpe_offloaded_ep->attr;
+		op_flags = zhpe_offloaded_ep->tx_attr.op_flags;
 		break;
 	case FI_CLASS_TX_CTX:
-		tx_ctx = container_of(ep, struct zhpe_tx_ctx, ctx);
+		tx_ctx = container_of(ep, struct zhpe_offloaded_tx_ctx, ctx);
 		ep_attr = tx_ctx->ep_attr;
 		op_flags = tx_ctx->attr.op_flags;
 		break;
 	default:
-		ZHPE_LOG_ERROR("Invalid EP type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid EP type\n");
 		goto done;
 	}
 
@@ -88,20 +88,20 @@ ssize_t zhpe_do_tx_atomic(struct fid_ep *ep,
 	}
 
 	/* When used by trigger, flags are assumed to be correct. */
-	if (OFI_LIKELY(!(flags & ZHPE_TRIGGERED_OP))) {
+	if (OFI_LIKELY(!(flags & ZHPE_OFFLOADED_TRIGGERED_OP))) {
 		if (flags &
-		    ~(ZHPE_NO_COMPLETION | ZHPE_USE_OP_FLAGS |
-		      ZHPE_TRIGGERED_OP | FI_COMPLETION | FI_TRIGGER |
+		    ~(ZHPE_OFFLOADED_NO_COMPLETION | ZHPE_OFFLOADED_USE_OP_FLAGS |
+		      ZHPE_OFFLOADED_TRIGGERED_OP | FI_COMPLETION | FI_TRIGGER |
 		      FI_FENCE | FI_ATOMICS | FI_FETCH_ATOMIC |
 		      FI_COMPARE_ATOMIC | FI_INJECT | FI_INJECT_COMPLETE |
 		      FI_TRANSMIT_COMPLETE | FI_DELIVERY_COMPLETE |
 		      FI_REMOTE_CQ_DATA))
 			goto done;
 
-		if (flags & ZHPE_USE_OP_FLAGS)
+		if (flags & ZHPE_OFFLOADED_USE_OP_FLAGS)
 			flags |= op_flags;
 
-		flags &= ~ZHPE_MASK_COMPLETE;
+		flags &= ~ZHPE_OFFLOADED_MASK_COMPLETE;
 		flags |= FI_DELIVERY_COMPLETE;
 	}
 
@@ -171,31 +171,31 @@ ssize_t zhpe_do_tx_atomic(struct fid_ep *ep,
 	}
 
 	if (flags & FI_TRIGGER) {
-		ret = zhpe_queue_atomic_op(ep, msg, comparev, compare_count,
+		ret = zhpe_offloaded_queue_atomic_op(ep, msg, comparev, compare_count,
 					   resultv, result_count, flags,
 					   FI_OP_ATOMIC);
 		if (ret != 1)
 			goto done;
 	}
 
-	ret = zhpe_ep_get_conn(ep_attr, msg->addr, &conn);
+	ret = zhpe_offloaded_ep_get_conn(ep_attr, msg->addr, &conn);
 	if (ret < 0)
 		goto done;
 
-	zhpe_tx_reserve_vars(ret, zhpe_pe_tx_handle_atomic, conn,
+	zhpe_offloaded_tx_reserve_vars(ret, zhpe_offloaded_pe_tx_handle_atomic, conn,
 			     msg->context, tindex, pe_entry, zhdr, lzaddr,
 			     done, 0);
 
-	hdr.rx_id = zhpe_get_rx_id(tx_ctx, msg->addr);
+	hdr.rx_id = zhpe_offloaded_get_rx_id(tx_ctx, msg->addr);
 	hdr.pe_entry_id = htons(tindex);
 	pe_entry->cq_data = msg->data;
 	/* We must wait for delivery complete to be consistent with
 	 * hardware.
 	 */
-	hdr.flags |= ZHPE_MSG_DELIVERY_COMPLETE;
+	hdr.flags |= ZHPE_OFFLOADED_MSG_DELIVERY_COMPLETE;
 	pe_entry->pe_root.compstat.completions++;
 
-	zpay = zhpe_pay_ptr(conn, zhdr, 0, __alignof__(*zpay));
+	zpay = zhpe_offloaded_pay_ptr(conn, zhdr, 0, __alignof__(*zpay));
 
 	o64 = 0;
 	if (msg->op != FI_ATOMIC_READ) {
@@ -250,15 +250,15 @@ ssize_t zhpe_do_tx_atomic(struct fid_ep *ep,
 
 	*zhdr = hdr;
 	cmd_len = zpay->atomic_req.end - (char *)zhdr;
-	ret = zhpe_pe_tx_ring(pe_entry, zhdr, lzaddr, cmd_len);
+	ret = zhpe_offloaded_pe_tx_ring(pe_entry, zhdr, lzaddr, cmd_len);
  done:
 	if (ret < 0 && tindex != -1)
-		zhpe_tx_release(pe_entry);
+		zhpe_offloaded_tx_release(pe_entry);
 
 	return ret;
 }
 
-static ssize_t zhpe_ep_atomic_writemsg(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_writemsg(struct fid_ep *ep,
 			const struct fi_msg_atomic *msg, uint64_t flags)
 {
 #if ENABLE_DEBUG
@@ -276,15 +276,15 @@ static ssize_t zhpe_ep_atomic_writemsg(struct fid_ep *ep,
 	case FI_ATOMIC_WRITE:
 		break;
 	default:
-		ZHPE_LOG_ERROR("Invalid operation type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid operation type\n");
 		return -FI_EINVAL;
 	}
 #endif
-	return zhpe_do_tx_atomic(ep, msg, NULL, NULL, 0,
+	return zhpe_offloaded_do_tx_atomic(ep, msg, NULL, NULL, 0,
 				  NULL, NULL, 0, flags);
 }
 
-static ssize_t zhpe_ep_atomic_write(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_write(struct fid_ep *ep,
 				    const void *buf, size_t count, void *desc,
 				    fi_addr_t dest_addr, uint64_t addr,
 				    uint64_t key, enum fi_datatype datatype,
@@ -312,10 +312,10 @@ static ssize_t zhpe_ep_atomic_write(struct fid_ep *ep,
 	msg.context = context;
 	msg.data = 0;
 
-	return zhpe_ep_atomic_writemsg(ep, &msg, ZHPE_USE_OP_FLAGS);
+	return zhpe_offloaded_ep_atomic_writemsg(ep, &msg, ZHPE_OFFLOADED_USE_OP_FLAGS);
 }
 
-static ssize_t zhpe_ep_atomic_writev(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_writev(struct fid_ep *ep,
 			const struct fi_ioc *iov, void **desc, size_t count,
 			fi_addr_t dest_addr,
 			uint64_t addr, uint64_t key,
@@ -345,10 +345,10 @@ static ssize_t zhpe_ep_atomic_writev(struct fid_ep *ep,
 	msg.context = context;
 	msg.data = 0;
 
-	return zhpe_ep_atomic_writemsg(ep, &msg, ZHPE_USE_OP_FLAGS);
+	return zhpe_offloaded_ep_atomic_writemsg(ep, &msg, ZHPE_OFFLOADED_USE_OP_FLAGS);
 }
 
-static ssize_t zhpe_ep_atomic_inject(struct fid_ep *ep, const void *buf,
+static ssize_t zhpe_offloaded_ep_atomic_inject(struct fid_ep *ep, const void *buf,
 				size_t count, fi_addr_t dest_addr,
 				uint64_t addr,
 				uint64_t key, enum fi_datatype datatype,
@@ -374,11 +374,11 @@ static ssize_t zhpe_ep_atomic_inject(struct fid_ep *ep, const void *buf,
 	msg.op = op;
 	msg.data = 0;
 
-	return zhpe_ep_atomic_writemsg(ep, &msg, FI_INJECT |
-				       ZHPE_NO_COMPLETION | ZHPE_USE_OP_FLAGS);
+	return zhpe_offloaded_ep_atomic_writemsg(ep, &msg, FI_INJECT |
+				       ZHPE_OFFLOADED_NO_COMPLETION | ZHPE_OFFLOADED_USE_OP_FLAGS);
 }
 
-static ssize_t zhpe_ep_atomic_readwritemsg(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_readwritemsg(struct fid_ep *ep,
 				const struct fi_msg_atomic *msg,
 				struct fi_ioc *resultv, void **result_desc,
 				size_t result_count, uint64_t flags)
@@ -398,15 +398,15 @@ static ssize_t zhpe_ep_atomic_readwritemsg(struct fid_ep *ep,
 	case FI_ATOMIC_WRITE:
 		break;
 	default:
-		ZHPE_LOG_ERROR("Invalid operation type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid operation type\n");
 		return -FI_EINVAL;
 	}
 
-	return zhpe_do_tx_atomic(ep, msg, NULL, NULL, 0,
+	return zhpe_offloaded_do_tx_atomic(ep, msg, NULL, NULL, 0,
 				 resultv, result_desc, result_count, flags);
 }
 
-static ssize_t zhpe_ep_atomic_readwrite(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_readwrite(struct fid_ep *ep,
 			const void *buf, size_t count, void *desc,
 			void *result, void *result_desc,
 			fi_addr_t dest_addr,
@@ -445,11 +445,11 @@ static ssize_t zhpe_ep_atomic_readwrite(struct fid_ep *ep,
 	resultv.addr = result;
 	resultv.count = count;
 
-	return zhpe_ep_atomic_readwritemsg(ep, &msg, &resultv, &result_desc, 1,
-						ZHPE_USE_OP_FLAGS);
+	return zhpe_offloaded_ep_atomic_readwritemsg(ep, &msg, &resultv, &result_desc, 1,
+						ZHPE_OFFLOADED_USE_OP_FLAGS);
 }
 
-static ssize_t zhpe_ep_atomic_readwritev(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_readwritev(struct fid_ep *ep,
 			const struct fi_ioc *iov, void **desc, size_t count,
 			struct fi_ioc *resultv, void **result_desc,
 			size_t result_count, fi_addr_t dest_addr,
@@ -474,12 +474,12 @@ static ssize_t zhpe_ep_atomic_readwritev(struct fid_ep *ep,
 	msg.op = op;
 	msg.context = context;
 
-	return zhpe_ep_atomic_readwritemsg(ep, &msg,
+	return zhpe_offloaded_ep_atomic_readwritemsg(ep, &msg,
 					   resultv, result_desc, result_count,
-					   ZHPE_USE_OP_FLAGS);
+					   ZHPE_OFFLOADED_USE_OP_FLAGS);
 }
 
-static ssize_t zhpe_ep_atomic_compwritemsg(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_compwritemsg(struct fid_ep *ep,
 			const struct fi_msg_atomic *msg,
 			const struct fi_ioc *comparev, void **compare_desc,
 			size_t compare_count, struct fi_ioc *resultv,
@@ -496,16 +496,16 @@ static ssize_t zhpe_ep_atomic_compwritemsg(struct fid_ep *ep,
 	case FI_MSWAP:
 		break;
 	default:
-		ZHPE_LOG_ERROR("Invalid operation type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid operation type\n");
 		return -FI_EINVAL;
 	}
 
-	return zhpe_do_tx_atomic(ep, msg, comparev, compare_desc,
+	return zhpe_offloaded_do_tx_atomic(ep, msg, comparev, compare_desc,
 				 compare_count, resultv, result_desc,
 				 result_count, flags);
 }
 
-static ssize_t zhpe_ep_atomic_compwrite(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_compwrite(struct fid_ep *ep,
 			const void *buf, size_t count, void *desc,
 			const void *compare, void *compare_desc,
 			void *result, void *result_desc,
@@ -542,11 +542,11 @@ static ssize_t zhpe_ep_atomic_compwrite(struct fid_ep *ep,
 	comparev.addr = (void *)compare;
 	comparev.count = count;
 
-	return zhpe_ep_atomic_compwritemsg(ep, &msg, &comparev, &compare_desc,
-			1, &resultv, &result_desc, 1, ZHPE_USE_OP_FLAGS);
+	return zhpe_offloaded_ep_atomic_compwritemsg(ep, &msg, &comparev, &compare_desc,
+			1, &resultv, &result_desc, 1, ZHPE_OFFLOADED_USE_OP_FLAGS);
 }
 
-static ssize_t zhpe_ep_atomic_compwritev(struct fid_ep *ep,
+static ssize_t zhpe_offloaded_ep_atomic_compwritev(struct fid_ep *ep,
 			const struct fi_ioc *iov, void **desc, size_t count,
 			const struct fi_ioc *comparev, void **compare_desc,
 			size_t compare_count, struct fi_ioc *resultv,
@@ -572,21 +572,21 @@ static ssize_t zhpe_ep_atomic_compwritev(struct fid_ep *ep,
 	msg.op = op;
 	msg.context = context;
 
-	return zhpe_ep_atomic_compwritemsg(ep, &msg,
+	return zhpe_offloaded_ep_atomic_compwritemsg(ep, &msg,
 					   comparev, compare_desc,
 					   compare_count,
 					   resultv, result_desc, result_count,
-					   ZHPE_USE_OP_FLAGS);
+					   ZHPE_OFFLOADED_USE_OP_FLAGS);
 }
 
 /* Domain parameter is ignored, okay to pass in NULL */
-int zhpe_query_atomic(struct fid_domain *domain,
+int zhpe_offloaded_query_atomic(struct fid_domain *domain,
 		      enum fi_datatype datatype, enum fi_op op,
 		      struct fi_atomic_attr *attr, uint64_t flags)
 {
 	int ret;
 
-	ret = ofi_atomic_valid(&zhpe_prov, datatype, op, flags);
+	ret = ofi_atomic_valid(&zhpe_offloaded_prov, datatype, op, flags);
 	if (ret < 0)
 		return ret;
 
@@ -636,57 +636,57 @@ int zhpe_query_atomic(struct fid_domain *domain,
 	return 0;
 }
 
-static int zhpe_ep_atomic_valid(struct fid_ep *ep,
+static int zhpe_offloaded_ep_atomic_valid(struct fid_ep *ep,
 		enum fi_datatype datatype, enum fi_op op, size_t *count)
 {
 	struct fi_atomic_attr attr;
 	int ret;
 
-	ret = zhpe_query_atomic(NULL, datatype, op, &attr, 0);
+	ret = zhpe_offloaded_query_atomic(NULL, datatype, op, &attr, 0);
 	if (!ret)
 		*count = attr.count;
 
 	return ret;
 }
 
-static int zhpe_ep_atomic_fetch_valid(struct fid_ep *ep,
+static int zhpe_offloaded_ep_atomic_fetch_valid(struct fid_ep *ep,
 		enum fi_datatype datatype, enum fi_op op, size_t *count)
 {
 	struct fi_atomic_attr attr;
 	int ret;
 
-	ret = zhpe_query_atomic(NULL, datatype, op, &attr, FI_FETCH_ATOMIC);
+	ret = zhpe_offloaded_query_atomic(NULL, datatype, op, &attr, FI_FETCH_ATOMIC);
 	if (!ret)
 		*count = attr.count;
 	return ret;
 }
 
-static int zhpe_ep_atomic_cswap_valid(struct fid_ep *ep,
+static int zhpe_offloaded_ep_atomic_cswap_valid(struct fid_ep *ep,
 		enum fi_datatype datatype, enum fi_op op, size_t *count)
 {
 	struct fi_atomic_attr attr;
 	int ret;
 
 	/* domain parameter is ignored - okay to pass in NULL */
-	ret = zhpe_query_atomic(NULL, datatype, op, &attr, FI_COMPARE_ATOMIC);
+	ret = zhpe_offloaded_query_atomic(NULL, datatype, op, &attr, FI_COMPARE_ATOMIC);
 	if (!ret)
 		*count = attr.count;
 	return ret;
 }
 
-struct fi_ops_atomic zhpe_ep_atomic = {
+struct fi_ops_atomic zhpe_offloaded_ep_atomic = {
 	.size = sizeof(struct fi_ops_atomic),
-	.write = zhpe_ep_atomic_write,
-	.writev = zhpe_ep_atomic_writev,
-	.writemsg = zhpe_ep_atomic_writemsg,
-	.inject = zhpe_ep_atomic_inject,
-	.readwrite = zhpe_ep_atomic_readwrite,
-	.readwritev = zhpe_ep_atomic_readwritev,
-	.readwritemsg = zhpe_ep_atomic_readwritemsg,
-	.compwrite = zhpe_ep_atomic_compwrite,
-	.compwritev = zhpe_ep_atomic_compwritev,
-	.compwritemsg = zhpe_ep_atomic_compwritemsg,
-	.writevalid = zhpe_ep_atomic_valid,
-	.readwritevalid = zhpe_ep_atomic_fetch_valid,
-	.compwritevalid = zhpe_ep_atomic_cswap_valid,
+	.write = zhpe_offloaded_ep_atomic_write,
+	.writev = zhpe_offloaded_ep_atomic_writev,
+	.writemsg = zhpe_offloaded_ep_atomic_writemsg,
+	.inject = zhpe_offloaded_ep_atomic_inject,
+	.readwrite = zhpe_offloaded_ep_atomic_readwrite,
+	.readwritev = zhpe_offloaded_ep_atomic_readwritev,
+	.readwritemsg = zhpe_offloaded_ep_atomic_readwritemsg,
+	.compwrite = zhpe_offloaded_ep_atomic_compwrite,
+	.compwritev = zhpe_offloaded_ep_atomic_compwritev,
+	.compwritemsg = zhpe_offloaded_ep_atomic_compwritemsg,
+	.writevalid = zhpe_offloaded_ep_atomic_valid,
+	.readwritevalid = zhpe_offloaded_ep_atomic_fetch_valid,
+	.compwritevalid = zhpe_offloaded_ep_atomic_cswap_valid,
 };

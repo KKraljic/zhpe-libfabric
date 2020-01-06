@@ -1,6 +1,6 @@
 %{!?configopts: %global configopts LDFLAGS=-Wl,--build-id}
-%{!?provider: %define provider zhpe}
-%{!?provider_formal: %define provider_formal zhpe}
+%{!?provider: %define provider zhpe_offloaded}
+%{!?provider_formal: %define provider_formal zhpe_offloaded}
 
 Name: libfabric-%{provider}
 Version: @VERSION@

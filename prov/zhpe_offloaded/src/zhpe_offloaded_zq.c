@@ -32,9 +32,9 @@
 
 #include <zhpe.h>
 
-#define ZHPE_LOG_DBG(...) _ZHPE_LOG_DBG(FI_LOG_EP_CTRL, __VA_ARGS__)
-#define ZHPE_LOG_INFO(...) _ZHPE_LOG_INFO(FI_LOG_EP_CTRL, __VA_ARGS__)
-#define ZHPE_LOG_ERROR(...) _ZHPE_LOG_ERROR(FI_LOG_EP_CTRL, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_EP_CTRL, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_INFO(...) _ZHPE_OFFLOADED_LOG_INFO(FI_LOG_EP_CTRL, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_EP_CTRL, __VA_ARGS__)
 
 struct mem_wire_msg1 {
 	uint32_t		rx_ring_size;
@@ -44,9 +44,9 @@ struct mem_wire_msg2 {
 	uint64_t		key;
 };
 
-void zhpe_tx_free(struct zhpe_tx *ztx)
+void zhpe_offloaded_tx_free(struct zhpe_offloaded_tx *ztx)
 {
-	struct zhpe_pe_retry	*pe_retry;
+	struct zhpe_offloaded_pe_retry	*pe_retry;
 	struct zhpeu_atm_snatch_head atm_list;
 	struct zhpeu_atm_list_next *atm_cur;
 	struct zhpeu_atm_list_next *atm_next;
@@ -56,20 +56,20 @@ void zhpe_tx_free(struct zhpe_tx *ztx)
 
 	zhpeu_atm_snatch_list(&ztx->pe_retry_list, &atm_list);
 	for (atm_cur = atm_list.head; atm_cur; atm_cur = atm_next) {
-		pe_retry = container_of(atm_cur, struct zhpe_pe_retry, next);
+		pe_retry = container_of(atm_cur, struct zhpe_offloaded_pe_retry, next);
 		atm_next = atm_load_rlx(&atm_cur->next);
 		if (atm_next == ZHPEU_ATM_LIST_END) {
 			atm_next = NULL;
 			break;
 		}
-		zhpe_pe_retry_free(ztx, pe_retry);
+		zhpe_offloaded_pe_retry_free(ztx, pe_retry);
 	}
 	while ((atm_cur = zhpeu_atm_fifo_pop(&ztx->pe_retry_free_list))) {
-		pe_retry = container_of(atm_cur, struct zhpe_pe_retry, next);
+		pe_retry = container_of(atm_cur, struct zhpe_offloaded_pe_retry, next);
 		free(pe_retry);
 	}
 
-	zhpe_mr_put(ztx->zmr);
+	zhpe_offloaded_mr_put(ztx->zmr);
 	zhpeq_free(ztx->zq);
 	free(ztx->pentries);
 	free(ztx->zentries);
@@ -78,16 +78,16 @@ void zhpe_tx_free(struct zhpe_tx *ztx)
 	free(ztx);
 }
 
-static int do_tx_setup(struct zhpe_ep_attr *ep_attr, struct zhpe_tx **ztx_out)
+static int do_tx_setup(struct zhpe_offloaded_ep_attr *ep_attr, struct zhpe_offloaded_tx **ztx_out)
 {
 	int			ret = -FI_ENOMEM;
-	struct zhpe_tx		*ztx = NULL;
+	struct zhpe_offloaded_tx		*ztx = NULL;
 	uint32_t		qlen;
 	uint32_t		i;
 	size_t			req;
 	struct fid_mr		*mr;
-	struct zhpe_free_index	ufree;
-	struct zhpe_free_index	pfree;
+	struct zhpe_offloaded_free_index	ufree;
+	struct zhpe_offloaded_free_index	pfree;
 
 	ztx = calloc_cachealigned(1, sizeof(*ztx));
 	if (!ztx)
@@ -127,7 +127,7 @@ static int do_tx_setup(struct zhpe_ep_attr *ep_attr, struct zhpe_tx **ztx_out)
 		ztx->pentries[i].pe_root.compstat.status = i + 1;
 	atm_store_rlx(&ztx->pfree, pfree);
 
-	req = ZHPE_RING_ENTRY_LEN * qlen;
+	req = ZHPE_OFFLOADED_RING_ENTRY_LEN * qlen;
 	ret = -posix_memalign((void **)&ztx->zentries,
 			      ofi_sysconf(_SC_PAGESIZE), req);
 	if (ret < 0) {
@@ -139,29 +139,29 @@ static int do_tx_setup(struct zhpe_ep_attr *ep_attr, struct zhpe_tx **ztx_out)
 	ret = zhpeq_alloc(ep_attr->domain->zdom, qlen, qlen,
 			  0, 0, 0, &ztx->zq);
 	if (ret < 0)  {
-		ZHPE_LOG_ERROR("zhpeq_alloc() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpeq_alloc() error %d\n", ret);
 		goto done;
 	}
 	memset(ztx->zentries, 0, req);
 
 	/* Register zentries memory. */
-	ret = zhpe_mr_reg_int_uncached(ep_attr->domain, ztx->zentries, req,
+	ret = zhpe_offloaded_mr_reg_int_uncached(ep_attr->domain, ztx->zentries, req,
 				       FI_WRITE, 0, &mr);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("zhpe_mr_reg_int_uncached() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpe_offloaded_mr_reg_int_uncached() error %d\n", ret);
 		goto done;
 	}
-	ztx->zmr = container_of(mr, struct zhpe_mr, mr_fid);
+	ztx->zmr = container_of(mr, struct zhpe_offloaded_mr, mr_fid);
 	ret = zhpeq_lcl_key_access(ztx->zmr->kdata, ztx->zentries,
 				   0, 0, &ztx->lz_zentries);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("zhpeq_lcl_key_access() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpeq_lcl_key_access() error %d\n", ret);
 		goto done;
 	}
 
  done:
 	if (ret < 0) {
-		zhpe_tx_put(ztx);
+		zhpe_offloaded_tx_put(ztx);
 		ztx = NULL;
 	}
 	atm_store_rlx(ztx_out, ztx);
@@ -169,7 +169,7 @@ static int do_tx_setup(struct zhpe_ep_attr *ep_attr, struct zhpe_tx **ztx_out)
 	return ret;
 }
 
-static inline void *scoreboard_alloc(struct zhpe_rx_common *rx_cmn)
+static inline void *scoreboard_alloc(struct zhpe_offloaded_rx_common *rx_cmn)
 {
 	const size_t		size = sizeof(*rx_cmn->scoreboard);
 	const uint32_t		bits = size * CHAR_BIT;
@@ -179,25 +179,25 @@ static inline void *scoreboard_alloc(struct zhpe_rx_common *rx_cmn)
 	return rx_cmn->scoreboard;
 }
 
-static void zhpe_tx_handle_conn_pull(struct zhpe_pe_root *pe_root,
+static void zhpe_offloaded_tx_handle_conn_pull(struct zhpe_offloaded_pe_root *pe_root,
 				     struct zhpeq_cq_entry *zq_cqe)
 {
-	struct zhpe_conn	*conn = pe_root->conn;
-	struct zhpe_rx_peer_visible *peer = (void *)&zq_cqe->z.result;
+	struct zhpe_offloaded_conn	*conn = pe_root->conn;
+	struct zhpe_offloaded_rx_peer_visible *peer = (void *)&zq_cqe->z.result;
 
 	if (zq_cqe->z.status == ZHPEQ_CQ_STATUS_SUCCESS)
 		atm_store_rlx(&conn->rx_remote.tail.shadow_head,
 			      ntohl(atm_load_rlx(&peer->completed)));
 	else
-		ZHPE_LOG_ERROR("status : %d\n", zq_cqe->z.status);
+		ZHPE_OFFLOADED_LOG_ERROR("status : %d\n", zq_cqe->z.status);
 	atm_dec(&conn->rx_remote.pull_busy);
 }
 
-static void do_rx_free(struct zhpe_conn *conn)
+static void do_rx_free(struct zhpe_offloaded_conn *conn)
 {
-	zhpe_rkey_put(conn->rx_remote.cmn.rkey);
+	zhpe_offloaded_rkey_put(conn->rx_remote.cmn.rkey);
 	conn->rx_remote.cmn.rkey = NULL;
-	zhpe_mr_put(conn->rx_local.cmn.zmr);
+	zhpe_offloaded_mr_put(conn->rx_local.cmn.zmr);
 	conn->rx_local.cmn.zmr = NULL;
 	free(conn->rx_local.zentries);
 	conn->rx_local.zentries = NULL;
@@ -207,15 +207,15 @@ static void do_rx_free(struct zhpe_conn *conn)
 	conn->rx_remote.cmn.scoreboard = NULL;
 }
 
-static int do_rx_setup(struct zhpe_conn *conn, int conn_fd)
+static int do_rx_setup(struct zhpe_offloaded_conn *conn, int conn_fd)
 {
 	int			ret;
-	struct zhpe_ep_attr	*ep_attr = conn->ep_attr;
-	struct zhpe_ep		*ep = conn->ep_attr->ep;
-	struct zhpe_rx_local	*rx_ringl = &conn->rx_local;
-	struct zhpe_rx_remote	*rx_ringr = &conn->rx_remote;
+	struct zhpe_offloaded_ep_attr	*ep_attr = conn->ep_attr;
+	struct zhpe_offloaded_ep		*ep = conn->ep_attr->ep;
+	struct zhpe_offloaded_rx_local	*rx_ringl = &conn->rx_local;
+	struct zhpe_offloaded_rx_remote	*rx_ringr = &conn->rx_remote;
 	char			blob[ZHPEQ_KEY_BLOB_MAX];
-	struct zhpe_msg_hdr	ohdr = { .op_type = 0 };
+	struct zhpe_offloaded_msg_hdr	ohdr = { .op_type = 0 };
 	struct mem_wire_msg1	mem_msg1;
 	struct mem_wire_msg2	mem_msg2;
 	size_t			blob_len;
@@ -227,17 +227,17 @@ static int do_rx_setup(struct zhpe_conn *conn, int conn_fd)
 
 	memset(rx_ringl, 0, sizeof(*rx_ringl));
 	memset(rx_ringr, 0, sizeof(*rx_ringr));
-	rx_ringr->pull_pe_root.handler = zhpe_tx_handle_conn_pull;
+	rx_ringr->pull_pe_root.handler = zhpe_offloaded_tx_handle_conn_pull;
 	rx_ringr->pull_pe_root.conn = conn;
 
 	/* rx ring will be the same as the tx size. */
 	qlenr = roundup_power_of_two(ep->tx_attr.size) * 2;
 	mem_msg1.rx_ring_size = htonl(qlenr);
 	if (conn_fd != -1) {
-		ret = zhpe_send_blob(conn_fd, &mem_msg1, sizeof(mem_msg1));
+		ret = zhpe_offloaded_send_blob(conn_fd, &mem_msg1, sizeof(mem_msg1));
 		if (ret < 0)
 			goto done;
-		ret = zhpe_recv_fixed_blob(conn_fd, &mem_msg1,
+		ret = zhpe_offloaded_recv_fixed_blob(conn_fd, &mem_msg1,
 					   sizeof(mem_msg1));
 		if (ret < 0)
 			goto done;
@@ -254,7 +254,7 @@ static int do_rx_setup(struct zhpe_conn *conn, int conn_fd)
 		goto done;
 
 	/* +1 for peer visible cache line. */
-	req = ZHPE_RING_ENTRY_LEN * (qlenl + 1);
+	req = ZHPE_OFFLOADED_RING_ENTRY_LEN * (qlenl + 1);
 	ret = -posix_memalign((void **)&rx_ringl->zentries,
 			      ofi_sysconf(_SC_PAGESIZE), req);
 	if (ret < 0) {
@@ -264,57 +264,57 @@ static int do_rx_setup(struct zhpe_conn *conn, int conn_fd)
 	memset(rx_ringl->zentries, 0, req);
 
 	/* Register zentries memory. */
-	ret = zhpe_mr_reg_int_uncached(ep_attr->domain, rx_ringl->zentries, req,
+	ret = zhpe_offloaded_mr_reg_int_uncached(ep_attr->domain, rx_ringl->zentries, req,
 				       FI_REMOTE_READ | FI_REMOTE_WRITE,
 				       ZHPEQ_MR_KEY_ZERO_OFF, &mr);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("zhpe_mr_reg_int_uncached() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpe_offloaded_mr_reg_int_uncached() error %d\n", ret);
 		goto done;
 	}
-	rx_ringl->cmn.zmr = container_of(mr, struct zhpe_mr, mr_fid);
+	rx_ringl->cmn.zmr = container_of(mr, struct zhpe_offloaded_mr, mr_fid);
 
 	/* Exchange key information. */
 	blob_len = sizeof(blob);
 	ret = zhpeq_zmmu_export(zhpeq_dom(conn->ztx->zq),
 				rx_ringl->cmn.zmr->kdata, blob, &blob_len);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("zhpeq_zmmu_export() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpeq_zmmu_export() error %d\n", ret);
 		goto done;
 	}
 
 	mem_msg2.key = htobe64(fi_mr_key(mr));
 	if (conn_fd != -1) {
-		ret = zhpe_send_blob(conn_fd, &mem_msg2, sizeof(mem_msg2));
+		ret = zhpe_offloaded_send_blob(conn_fd, &mem_msg2, sizeof(mem_msg2));
 		if (ret < 0)
 			goto done;
-		ret = zhpe_send_blob(conn_fd, blob, blob_len);
+		ret = zhpe_offloaded_send_blob(conn_fd, blob, blob_len);
 		if (ret < 0)
 			goto done;
-		ret = zhpe_recv_fixed_blob(conn_fd, &mem_msg2,
+		ret = zhpe_offloaded_recv_fixed_blob(conn_fd, &mem_msg2,
 					   sizeof(mem_msg2));
 		if (ret < 0)
 			goto done;
-		ret = zhpe_recv_fixed_blob(conn_fd, blob, blob_len);
+		ret = zhpe_offloaded_recv_fixed_blob(conn_fd, blob, blob_len);
 		if (ret < 0)
 			goto done;
 	}
 
-	ret = zhpe_conn_rkey_import(conn, ohdr, be64toh(mem_msg2.key),
+	ret = zhpe_offloaded_conn_rkey_import(conn, ohdr, be64toh(mem_msg2.key),
 				    blob, blob_len, &rx_ringr->cmn.rkey);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("zhpeq_conn_key_import() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpeq_conn_key_import() error %d\n", ret);
 		goto done;
 	}
 	ret = zhpeq_rem_key_access(rx_ringr->cmn.rkey->kdata, 0, 0, 0,
 				   &rx_ringr->rz_zentries);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("zhpeq_rem_key_access() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpeq_rem_key_access() error %d\n", ret);
 		goto done;
 	}
 	/* Set up pushed locations. */
-	off = ZHPE_RING_ENTRY_LEN * qlenl;
+	off = ZHPE_OFFLOADED_RING_ENTRY_LEN * qlenl;
 	rx_ringl->peer_visible = (void *)(rx_ringl->zentries + off);
-	off = ZHPE_RING_ENTRY_LEN * qlenr;
+	off = ZHPE_OFFLOADED_RING_ENTRY_LEN * qlenr;
 	rx_ringr->rz_peer_visible = rx_ringr->rz_zentries + off;
  done:
 	if (ret < 0)
@@ -323,10 +323,10 @@ static int do_rx_setup(struct zhpe_conn *conn, int conn_fd)
 	return ret;
 }
 
-int zhpe_compare_zkeys(void *vk1, void *vk2)
+int zhpe_offloaded_compare_zkeys(void *vk1, void *vk2)
 {
-	struct zhpe_key		*k1 = (void *)vk1;
-	struct zhpe_key		*k2 = (void *)vk2;
+	struct zhpe_offloaded_key		*k1 = (void *)vk1;
+	struct zhpe_offloaded_key		*k2 = (void *)vk2;
 
 	if (k1->key < k2->key)
 		return -1;
@@ -336,10 +336,10 @@ int zhpe_compare_zkeys(void *vk1, void *vk2)
 	return memcmp(&k1->internal, &k2->internal, sizeof(k1->internal));
 }
 
-int zhpe_conn_z_setup(struct zhpe_conn *conn, int conn_fd)
+int zhpe_offloaded_conn_z_setup(struct zhpe_offloaded_conn *conn, int conn_fd)
 {
 	int			ret = 0;
-	struct zhpe_ep_attr	*ep_attr = conn->ep_attr;
+	struct zhpe_offloaded_ep_attr	*ep_attr = conn->ep_attr;
 	union sockaddr_in46	sa;
 	size_t			sa_len = sizeof(sa);
 
@@ -353,26 +353,26 @@ int zhpe_conn_z_setup(struct zhpe_conn *conn, int conn_fd)
 	mutex_unlock(&ep_attr->conn_mutex);
 	if (ret < 0)
 		goto done;
-	zhpe_pe_add_queue(ep_attr->ztx);
+	zhpe_offloaded_pe_add_queue(ep_attr->ztx);
 	/* Init remote mr tree. */
 	dlist_init(&conn->rkey_deferred_list);
 	ret = -FI_ENOMEM;
-	conn->rkey_tree = rbtNew(zhpe_compare_zkeys);
+	conn->rkey_tree = rbtNew(zhpe_offloaded_compare_zkeys);
 	if (!conn->rkey_tree)
 		goto done;
-	conn->kexp_tree = rbtNew(zhpe_compare_zkeys);
+	conn->kexp_tree = rbtNew(zhpe_offloaded_compare_zkeys);
 	if (!conn->kexp_tree)
 		goto done;
 	/* Get address index. */
 	ret = zhpeq_backend_exchange(conn->ztx->zq, conn_fd, &sa, &sa_len);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("%s,%u:zhpeq_backend_exchange() error %d\n",
+		ZHPE_OFFLOADED_LOG_ERROR("%s,%u:zhpeq_backend_exchange() error %d\n",
 			       __FUNCTION__, __LINE__, ret);
 		goto done;
 	}
 	ret = zhpeq_backend_open(conn->ztx->zq, &sa);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("%s,%u:zhpeq_backend_open() error %d\n",
+		ZHPE_OFFLOADED_LOG_ERROR("%s,%u:zhpeq_backend_open() error %d\n",
 			       __FUNCTION__, __LINE__, ret);
 		goto done;
 	}
@@ -386,7 +386,7 @@ int zhpe_conn_z_setup(struct zhpe_conn *conn, int conn_fd)
 	conn->tx_ctx = ep_attr->tx_ctx;
 	conn->rx_ctx = ep_attr->rx_ctx;
 	mutex_lock(&ep_attr->conn_mutex);
-	conn->state = ZHPE_CONN_STATE_READY;
+	conn->state = ZHPE_OFFLOADED_CONN_STATE_READY;
 	zhpeu_atm_snatch_insert(&conn->ztx->rx_poll_list,
 				&conn->rx_poll_next);
 	mutex_unlock(&ep_attr->conn_mutex);
@@ -396,11 +396,11 @@ int zhpe_conn_z_setup(struct zhpe_conn *conn, int conn_fd)
  done:
 	return ret;
 }
-int zhpe_conn_fam_setup(struct zhpe_conn *conn)
+int zhpe_offloaded_conn_fam_setup(struct zhpe_offloaded_conn *conn)
 {
 	int			ret = 0;
-	struct zhpe_ep_attr	*ep_attr = conn->ep_attr;
-	struct zhpe_rkey_data	*new;
+	struct zhpe_offloaded_ep_attr	*ep_attr = conn->ep_attr;
+	struct zhpe_offloaded_rkey_data	*new;
 
 	mutex_lock(&ep_attr->conn_mutex);
 	if (!ep_attr->ztx)
@@ -412,11 +412,11 @@ int zhpe_conn_fam_setup(struct zhpe_conn *conn)
 	mutex_unlock(&ep_attr->conn_mutex);
 	if (ret < 0)
 		goto done;
-	zhpe_pe_add_queue(ep_attr->ztx);
+	zhpe_offloaded_pe_add_queue(ep_attr->ztx);
 	/* Init remote mr tree. */
 	dlist_init(&conn->rkey_deferred_list);
 	ret = -FI_ENOMEM;
-	conn->rkey_tree = rbtNew(zhpe_compare_zkeys);
+	conn->rkey_tree = rbtNew(zhpe_offloaded_compare_zkeys);
 	if (!conn->rkey_tree)
 		goto done;
 	new = malloc(sizeof(*new));
@@ -429,13 +429,13 @@ int zhpe_conn_fam_setup(struct zhpe_conn *conn)
 	new->zkey.key = 0;
 	new->zkey.internal = false;
 	new->kdata = NULL;
-	new->ohdr = (struct zhpe_msg_hdr){ 0 };
+	new->ohdr = (struct zhpe_offloaded_msg_hdr){ 0 };
 	new->use_count = 1;
-	zhpe_rkey_rbtInsert(conn->rkey_tree, new);
+	zhpe_offloaded_rkey_rbtInsert(conn->rkey_tree, new);
 	/* Get address index. */
 	ret = zhpeq_backend_open(conn->ztx->zq, &conn->addr);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("%s,%u:zhpeq_backend_open() error %d\n",
+		ZHPE_OFFLOADED_LOG_ERROR("%s,%u:zhpeq_backend_open() error %d\n",
 			       __FUNCTION__, __LINE__, ret);
 		goto done;
 	}
@@ -444,7 +444,7 @@ int zhpe_conn_fam_setup(struct zhpe_conn *conn)
 	ret = zhpeq_zmmu_fam_import(ep_attr->domain->zdom, conn->zq_index,
 				    false,  &new->kdata);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("%s,%u:zhpeq_zmmu_fam_import() error %d\n",
+		ZHPE_OFFLOADED_LOG_ERROR("%s,%u:zhpeq_zmmu_fam_import() error %d\n",
 			       __FUNCTION__, __LINE__, ret);
 		goto done;
 	}
@@ -452,7 +452,7 @@ int zhpe_conn_fam_setup(struct zhpe_conn *conn)
 	conn->tx_ctx = ep_attr->tx_ctx;
 	conn->rx_ctx = ep_attr->rx_ctx;
 	mutex_lock(&ep_attr->conn_mutex);
-	conn->state = ZHPE_CONN_STATE_READY;
+	conn->state = ZHPE_OFFLOADED_CONN_STATE_READY;
 	mutex_unlock(&ep_attr->conn_mutex);
 	cond_broadcast(&ep_attr->conn_cond);
 	ret = 0;
@@ -461,18 +461,18 @@ int zhpe_conn_fam_setup(struct zhpe_conn *conn)
 	return ret;
 }
 
-void zhpe_rkey_free(struct zhpe_rkey_data *rkey)
+void zhpe_offloaded_rkey_free(struct zhpe_offloaded_rkey_data *rkey)
 {
 	zhpeq_zmmu_free(zhpeq_dom(rkey->ztx->zq), rkey->kdata);
-	zhpe_tx_put(rkey->ztx);
+	zhpe_offloaded_tx_put(rkey->ztx);
 	free(rkey);
 }
 
-void zhpe_conn_z_free(struct zhpe_conn *conn)
+void zhpe_offloaded_conn_z_free(struct zhpe_offloaded_conn *conn)
 {
 	RbtIterator		*rbt;
-	struct zhpe_rkey_data	*rkey;
-	struct zhpe_kexp_data	*kexp;
+	struct zhpe_offloaded_rkey_data	*rkey;
+	struct zhpe_offloaded_kexp_data	*kexp;
 
 	if (conn->rkey_tree) {
 		/* Is lock initialized? */
@@ -480,7 +480,7 @@ void zhpe_conn_z_free(struct zhpe_conn *conn)
 			/* FIXME: Think about driver disconnect. */
 			fastlock_acquire(&conn->ep_attr->domain->lock);
 			while ((rbt = rbtBegin(conn->kexp_tree)))  {
-				kexp = zhpe_rbtKeyValue(conn->kexp_tree, rbt);
+				kexp = zhpe_offloaded_rbtKeyValue(conn->kexp_tree, rbt);
 				rbtErase(conn->kexp_tree, rbt);
 				dlist_remove(&kexp->lentry);
 				free(kexp);
@@ -490,13 +490,13 @@ void zhpe_conn_z_free(struct zhpe_conn *conn)
 		}
 		while (!dlist_empty(&conn->rkey_deferred_list)) {
 			dlist_pop_front(&conn->rkey_deferred_list,
-					struct zhpe_rkey_data, rkey, lentry);
-			zhpe_rkey_free(rkey);
+					struct zhpe_offloaded_rkey_data, rkey, lentry);
+			zhpe_offloaded_rkey_free(rkey);
 		}
 		while ((rbt = rbtBegin(conn->rkey_tree)))  {
-			rkey = zhpe_rbtKeyValue(conn->rkey_tree, rbt);
+			rkey = zhpe_offloaded_rbtKeyValue(conn->rkey_tree, rbt);
 			rbtErase(conn->rkey_tree, rbt);
-			zhpe_rkey_free(rkey);
+			zhpe_offloaded_rkey_free(rkey);
 		}
 		rbtDelete(conn->rkey_tree);
 		conn->rkey_tree = NULL;
@@ -504,13 +504,13 @@ void zhpe_conn_z_free(struct zhpe_conn *conn)
 	do_rx_free(conn);
 	if (conn->zq_index != FI_ADDR_NOTAVAIL)
 		zhpeq_backend_close(conn->ztx->zq, conn->zq_index);
-	zhpe_tx_put(conn->ztx);
+	zhpe_offloaded_tx_put(conn->ztx);
 }
 
-int __zhpe_conn_pull(struct zhpe_conn *conn)
+int __zhpe_offloaded_conn_pull(struct zhpe_offloaded_conn *conn)
 {
 	int			ret = 0;
-	struct zhpe_rx_remote	*rx_ringr = &conn->rx_remote;
+	struct zhpe_offloaded_rx_remote	*rx_ringr = &conn->rx_remote;
 	uint32_t		zindex;
 
 	ret = zhpeq_reserve(conn->ztx->zq, 1);
@@ -518,25 +518,25 @@ int __zhpe_conn_pull(struct zhpe_conn *conn)
 		goto done;
 	zindex = ret;
 	ret = zhpeq_geti(conn->ztx->zq, zindex, false,
-			 sizeof(struct zhpe_rx_peer_visible),
+			 sizeof(struct zhpe_offloaded_rx_peer_visible),
 			 rx_ringr->rz_peer_visible,
 			 &rx_ringr->pull_pe_root);
 	if (ret < 0)
 		goto done;
-	ret = zhpe_zq_commit_spin(conn->ztx->zq, zindex, 1);
+	ret = zhpe_offloaded_zq_commit_spin(conn->ztx->zq, zindex, 1);
 
  done:
 	if (ret < 0)
-		ZHPE_LOG_ERROR("pull failed:error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("pull failed:error %d\n", ret);
 
 	return ret;
 }
 
-int zhpe_tx_free_res(struct zhpe_conn *conn, int64_t tindex,
+int zhpe_offloaded_tx_free_res(struct zhpe_offloaded_conn *conn, int64_t tindex,
 		     int64_t zindex, int64_t rindex, uint8_t pe_flags)
 {
 	int			ret = 0;
-	struct zhpe_tx		*ztx = conn->ztx;
+	struct zhpe_offloaded_tx		*ztx = conn->ztx;
 
 	if (!conn)
 		goto done;
@@ -546,7 +546,7 @@ int zhpe_tx_free_res(struct zhpe_conn *conn, int64_t tindex,
 	 * not allocated.
 	 */
 	if (tindex >= 0)
-		zhpe_tx_release(&ztx->pentries[tindex]);
+		zhpe_offloaded_tx_release(&ztx->pentries[tindex]);
 
 	if (zindex < 0)
 		goto done;
@@ -554,7 +554,7 @@ int zhpe_tx_free_res(struct zhpe_conn *conn, int64_t tindex,
 	/* If no rx_ring space, send NOP to bridge. */
 	if (rindex < 0) {
 		ret = zhpeq_nop(ztx->zq, zindex, false,
-				ZHPE_CONTEXT_IGNORE_PTR);
+				ZHPE_OFFLOADED_CONTEXT_IGNORE_PTR);
 		if (ret < 0)
 			goto done;
 		goto commit;
@@ -567,7 +567,7 @@ int zhpe_tx_free_res(struct zhpe_conn *conn, int64_t tindex,
 	abort();
 
 commit:
-	ret = zhpe_zq_commit_spin(ztx->zq, zindex, 1);
+	ret = zhpe_offloaded_zq_commit_spin(ztx->zq, zindex, 1);
 	if (ret < 0)
 		goto done;
  done:
@@ -575,11 +575,11 @@ commit:
 	return ret;
 }
 
-#define	CHUNK_SIZE_OFF		offsetof(struct zhpe_slab_free_entry, size)
-#define	CHUNK_DATA_OFF		offsetof(struct zhpe_slab_free_entry, lentry)
+#define	CHUNK_SIZE_OFF		offsetof(struct zhpe_offloaded_slab_free_entry, size)
+#define	CHUNK_DATA_OFF		offsetof(struct zhpe_offloaded_slab_free_entry, lentry)
 #define CHUNK_SIZE_SIZE		(CHUNK_DATA_OFF - CHUNK_SIZE_OFF)
 #define CHUNK_SIZE_MIN \
-	(sizeof(struct zhpe_slab_free_entry) - CHUNK_DATA_OFF)
+	(sizeof(struct zhpe_offloaded_slab_free_entry) - CHUNK_DATA_OFF)
 #define CHUNK_SIZE_PINUSE	((uintptr_t)1)
 #define CHUNK_SIZE_MASK		(~(sizeof(uintptr_t) - 1))
 
@@ -593,17 +593,17 @@ static inline size_t chunk_size(size_t csize)
 	return (csize & CHUNK_SIZE_MASK) + CHUNK_SIZE_SIZE;
 }
 
-static inline void *_next_chunk(struct zhpe_slab_free_entry *chunk)
+static inline void *_next_chunk(struct zhpe_offloaded_slab_free_entry *chunk)
 {
 	return ((char *)chunk + chunk_size(chunk->size));
 }
 
-static inline void *_prev_chunk(struct zhpe_slab_free_entry *chunk)
+static inline void *_prev_chunk(struct zhpe_offloaded_slab_free_entry *chunk)
 {
 	return ((char *)chunk - chunk_size(chunk->prev_size));
 }
 
-static inline void *prev_chunk(struct zhpe_slab_free_entry *chunk)
+static inline void *prev_chunk(struct zhpe_offloaded_slab_free_entry *chunk)
 {
 	if (chunk->size & CHUNK_SIZE_PINUSE)
 		return NULL;
@@ -616,7 +616,7 @@ static inline void *prev_chunk(struct zhpe_slab_free_entry *chunk)
 
 static uint64_t			slab_check_path;
 static void			*slab_check_ptr[4];
-struct zhpe_slab_free_entry	slab_check_chunk[4];
+struct zhpe_offloaded_slab_free_entry	slab_check_chunk[4];
 
 static void slab_check_save_path(uint shift)
 {
@@ -626,7 +626,7 @@ static void slab_check_save_path(uint shift)
 		slab_check_path |= (1 << shift);
 }
 
-static void slab_check_save(struct zhpe_slab_free_entry *chunk, uint idx)
+static void slab_check_save(struct zhpe_offloaded_slab_free_entry *chunk, uint idx)
 {
 	if (idx >= ARRAY_SIZE(slab_check_ptr) ||
 	    idx >= ARRAY_SIZE(slab_check_chunk))
@@ -644,16 +644,16 @@ static void slab_check_save(struct zhpe_slab_free_entry *chunk, uint idx)
 		slab_check_chunk[idx] = *chunk;
 }
 
-static void slab_check(struct zhpe_slab *slab)
+static void slab_check(struct zhpe_offloaded_slab *slab)
 {
-	struct zhpe_slab_free_entry *prev;
-	struct zhpe_slab_free_entry *chunk;
-	struct zhpe_slab_free_entry *next;
-	struct zhpe_slab_free_entry *free;
+	struct zhpe_offloaded_slab_free_entry *prev;
+	struct zhpe_offloaded_slab_free_entry *chunk;
+	struct zhpe_offloaded_slab_free_entry *next;
+	struct zhpe_offloaded_slab_free_entry *free;
 	size_t			free_count;
 
 	/* Clear seen bits in free list. */
-	dlist_foreach_container(&slab->free_list, struct zhpe_slab_free_entry,
+	dlist_foreach_container(&slab->free_list, struct zhpe_offloaded_slab_free_entry,
 				free, lentry)
 		free->size &= ~CHUNK_SIZE_SEEN;
 
@@ -691,7 +691,7 @@ static void slab_check(struct zhpe_slab *slab)
 	}
 
 	/* Check seen bits in free list. */
-	dlist_foreach_container(&slab->free_list, struct zhpe_slab_free_entry,
+	dlist_foreach_container(&slab->free_list, struct zhpe_offloaded_slab_free_entry,
 				free, lentry) {
 		if (!free_count)
 			abort();
@@ -701,11 +701,11 @@ static void slab_check(struct zhpe_slab *slab)
 	}
 }
 
-static void slab_check_freed(struct zhpe_slab *slab,
-			     struct zhpe_slab_free_entry *freed)
+static void slab_check_freed(struct zhpe_offloaded_slab *slab,
+			     struct zhpe_offloaded_slab_free_entry *freed)
 {
-	struct zhpe_slab_free_entry *chunk;
-	struct zhpe_slab_free_entry *next;
+	struct zhpe_offloaded_slab_free_entry *chunk;
+	struct zhpe_offloaded_slab_free_entry *next;
 
 	chunk = (void *)((char *)slab->mem - CHUNK_SIZE_OFF);
 	for (;;) {
@@ -725,27 +725,27 @@ static inline void slab_check_save_path(uint shift)
 {
 }
 
-static inline void slab_check_save(struct zhpe_slab_free_entry *chunk,
+static inline void slab_check_save(struct zhpe_offloaded_slab_free_entry *chunk,
 				   uint idx)
 {
 }
 
-static inline void slab_check(struct zhpe_slab *slab)
+static inline void slab_check(struct zhpe_offloaded_slab *slab)
 {
 }
 
-static void slab_check_freed(struct zhpe_slab *slab,
-			     struct zhpe_slab_free_entry *freed)
+static void slab_check_freed(struct zhpe_offloaded_slab *slab,
+			     struct zhpe_offloaded_slab_free_entry *freed)
 {
 }
 
 #endif
 
-int zhpe_slab_init(struct zhpe_slab *slab, size_t size,
-		   struct zhpe_domain *domain)
+int zhpe_offloaded_slab_init(struct zhpe_offloaded_slab *slab, size_t size,
+		   struct zhpe_offloaded_domain *domain)
 {
 	int			ret = -FI_ENOMEM;
-	struct zhpe_slab_free_entry *chunk;
+	struct zhpe_offloaded_slab_free_entry *chunk;
 	struct fid_mr		*mr;
 
 	/* Align to pointer size boundary; assumed to be power of 2
@@ -767,38 +767,38 @@ int zhpe_slab_init(struct zhpe_slab *slab, size_t size,
 	chunk = _next_chunk(chunk);
 	chunk->size = 0;
 
-	ret = zhpe_mr_reg_int_uncached(domain, slab->mem, slab->size,
+	ret = zhpe_offloaded_mr_reg_int_uncached(domain, slab->mem, slab->size,
 				       FI_READ | FI_WRITE, 0, &mr);
 	if (ret < 0) {
-		ZHPE_LOG_ERROR("zhpe_mr_reg_int_uncached() error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("zhpe_offloaded_mr_reg_int_uncached() error %d\n", ret);
 		goto done;
 	}
-	slab->zmr = container_of(mr, struct zhpe_mr, mr_fid);
+	slab->zmr = container_of(mr, struct zhpe_offloaded_mr, mr_fid);
  done:
 	return ret;
 }
 
-void zhpe_slab_destroy(struct zhpe_slab *slab)
+void zhpe_offloaded_slab_destroy(struct zhpe_offloaded_slab *slab)
 {
 	if (slab->mem) {
 		slab_check(slab);
-		zhpe_mr_put(slab->zmr);
+		zhpe_offloaded_mr_put(slab->zmr);
 		slab->zmr = NULL;
 		free(slab->mem);
 		slab->mem = NULL;
 	}
 }
 
-int zhpe_slab_alloc(struct zhpe_slab *slab, size_t size,  struct zhpe_iov *iov)
+int zhpe_offloaded_slab_alloc(struct zhpe_offloaded_slab *slab, size_t size,  struct zhpe_offloaded_iov *iov)
 {
 	int			ret = -ENOMEM;
-	struct zhpe_slab_free_entry *chunk;
-	struct zhpe_slab_free_entry *next;
+	struct zhpe_offloaded_slab_free_entry *chunk;
+	struct zhpe_offloaded_slab_free_entry *next;
 
 	if (!slab->mem)
 		goto done;
 
-	iov->iov_len = size | ZHPE_ZIOV_LEN_KEY_INT;
+	iov->iov_len = size | ZHPE_OFFLOADED_ZIOV_LEN_KEY_INT;
 	size = (size + ~CHUNK_SIZE_MASK) & CHUNK_SIZE_MASK;
 	if (size < CHUNK_SIZE_MIN)
 		size = CHUNK_SIZE_MIN;
@@ -806,7 +806,7 @@ int zhpe_slab_alloc(struct zhpe_slab *slab, size_t size,  struct zhpe_iov *iov)
 	 * Every free entry should have the PINUSE bit set because,
 	 * otherwise, it would be merged with another block.
 	 */
-	dlist_foreach_container(&slab->free_list, struct zhpe_slab_free_entry,
+	dlist_foreach_container(&slab->free_list, struct zhpe_offloaded_slab_free_entry,
 				chunk, lentry) {
 		if (chunk->size >= size)
 			goto found;
@@ -840,12 +840,12 @@ int zhpe_slab_alloc(struct zhpe_slab *slab, size_t size,  struct zhpe_iov *iov)
 	return ret;
 }
 
-void zhpe_slab_free(struct zhpe_slab *slab, void *ptr)
+void zhpe_offloaded_slab_free(struct zhpe_offloaded_slab *slab, void *ptr)
 {
-	struct zhpe_slab_free_entry *chunk;
-	struct zhpe_slab_free_entry *next;
-	struct zhpe_slab_free_entry *nextnext;
-	struct zhpe_slab_free_entry *prev;
+	struct zhpe_offloaded_slab_free_entry *chunk;
+	struct zhpe_offloaded_slab_free_entry *next;
+	struct zhpe_offloaded_slab_free_entry *nextnext;
+	struct zhpe_offloaded_slab_free_entry *prev;
 
 	if (!ptr)
 		return;
@@ -887,14 +887,14 @@ void zhpe_slab_free(struct zhpe_slab *slab, void *ptr)
 	return;
 }
 
-int zhpe_iov_op_get(struct zhpeq *zq, uint32_t zindex, bool fence,
+int zhpe_offloaded_iov_op_get(struct zhpeq *zq, uint32_t zindex, bool fence,
 		    void *lptr, uint64_t lza, size_t len, uint64_t rza,
 		    void *context)
 {
 	return zhpeq_get(zq, zindex, fence, lza, len, rza, context);
 }
 
-int zhpe_iov_op_get_imm(struct zhpeq *zq, uint32_t zindex, bool fence,
+int zhpe_offloaded_iov_op_get_imm(struct zhpeq *zq, uint32_t zindex, bool fence,
 			  void *lptr, uint64_t lza, size_t len, uint64_t rza,
 			  void *context)
 {
@@ -904,7 +904,7 @@ int zhpe_iov_op_get_imm(struct zhpeq *zq, uint32_t zindex, bool fence,
 	return zhpeq_geti(zq, zindex, fence, len, rza, context);
 }
 
-int zhpe_iov_op_put(struct zhpeq *zq, uint32_t zindex, bool fence,
+int zhpe_offloaded_iov_op_put(struct zhpeq *zq, uint32_t zindex, bool fence,
 		    void *lptr, uint64_t lza, size_t len, uint64_t rza,
 		    void *context)
 {
@@ -918,9 +918,9 @@ int zhpe_iov_op_put(struct zhpeq *zq, uint32_t zindex, bool fence,
 	return ret;
 }
 
-int zhpe_iov_op(struct zhpe_pe_root *pe_root,
-		struct zhpe_iov_state *lstate,
-		struct zhpe_iov_state *rstate,
+int zhpe_offloaded_iov_op(struct zhpe_offloaded_pe_root *pe_root,
+		struct zhpe_offloaded_iov_state *lstate,
+		struct zhpe_offloaded_iov_state *rstate,
 		size_t max_bytes, uint8_t max_ops,
 		int (*op)(struct zhpeq *zq, uint32_t zindex, bool fence,
 			  void *lptr, uint64_t lza, size_t len,
@@ -929,8 +929,8 @@ int zhpe_iov_op(struct zhpe_pe_root *pe_root,
 {
 	int			ret = 0;
 	struct zhpeq		*zq = pe_root->conn->ztx->zq;
-	struct zhpe_iov_state	save_lstate = *lstate;
-	struct zhpe_iov_state	save_rstate = *rstate;
+	struct zhpe_offloaded_iov_state	save_lstate = *lstate;
+	struct zhpe_offloaded_iov_state	save_rstate = *rstate;
 	int64_t			rc;
 	uint32_t		zindex;
 	size_t			ops;
@@ -943,26 +943,26 @@ int zhpe_iov_op(struct zhpe_pe_root *pe_root,
 	void			*lptr;
 
 	/* Note: caller should initialize pe_root->completions zero or some
-	 * other appropirate value and set the ZHPE_PE_PROV flag, if
+	 * other appropirate value and set the ZHPE_OFFLOADED_PE_PROV flag, if
 	 * required.
 	 *
 	 * We need to determine the number of ops before reserve them.
 	 */
 	ops = 0;
 	bytes = 0;
-	while (!zhpe_iov_state_empty(lstate) &&
-	       !zhpe_iov_state_empty(rstate) &&
+	while (!zhpe_offloaded_iov_state_empty(lstate) &&
+	       !zhpe_offloaded_iov_state_empty(rstate) &&
 	       ops < max_ops && bytes < max_bytes) {
 
-		llen = zhpe_ziov_state_len(lstate);
-		rlen = zhpe_ziov_state_len(rstate);
+		llen = zhpe_offloaded_ziov_state_len(lstate);
+		rlen = zhpe_offloaded_ziov_state_len(rstate);
 		len = llen;
 		if (len > rlen)
 			len = rlen;
 		ops++;
 		bytes += len;
-		zhpe_ziov_state_adv(lstate, len);
-		zhpe_ziov_state_adv(rstate, len);
+		zhpe_offloaded_ziov_state_adv(lstate, len);
+		zhpe_offloaded_ziov_state_adv(rstate, len);
 	}
 	*lstate = save_lstate;
 	*rstate = save_rstate;
@@ -987,11 +987,11 @@ int zhpe_iov_op(struct zhpe_pe_root *pe_root,
 	atm_add(&pe_root->compstat.completions, max_ops);
 
 	for (ops = 0; ops < max_ops; ops++) {
-		llen = zhpe_ziov_state_len(lstate);
-		lptr = zhpe_iov_state_ptr(lstate, ZHPE_IOV_ZIOV);
-		lza = zhpe_ziov_state_zaddr(lstate);
-		rlen = zhpe_ziov_state_len(rstate);
-		rza = zhpe_ziov_state_zaddr(rstate);
+		llen = zhpe_offloaded_ziov_state_len(lstate);
+		lptr = zhpe_offloaded_iov_state_ptr(lstate, ZHPE_OFFLOADED_IOV_ZIOV);
+		lza = zhpe_offloaded_ziov_state_zaddr(lstate);
+		rlen = zhpe_offloaded_ziov_state_len(rstate);
+		rza = zhpe_offloaded_ziov_state_zaddr(rstate);
 
 		len = llen;
 		if (len > rlen)
@@ -1003,129 +1003,129 @@ int zhpe_iov_op(struct zhpe_pe_root *pe_root,
 		ret = op(zq, zindex + ops, false, lptr, lza, len, rza, pe_root);
 		if (ret < 0)
 			break;
-		zhpe_ziov_state_adv(lstate, len);
-		zhpe_ziov_state_adv(rstate, len);
+		zhpe_offloaded_ziov_state_adv(lstate, len);
+		zhpe_offloaded_ziov_state_adv(rstate, len);
 	}
 	if (ret < 0) {
 		for (; ops < max_ops; ops++)
 			zhpeq_nop(zq, zindex + ops, false,
-				  ZHPE_CONTEXT_IGNORE_PTR);
+				  ZHPE_OFFLOADED_CONTEXT_IGNORE_PTR);
 	}
-	ret = zhpe_zq_commit_spin(zq, zindex, max_ops);
+	ret = zhpe_offloaded_zq_commit_spin(zq, zindex, max_ops);
 
  done:
 	return (ret < 0 ? ret : ops);
 }
 
-int zhpe_put_imm_to_iov(struct zhpe_pe_root *pe_root, void *lbuf,
-			size_t llen, struct zhpe_iov_state *rstate,
+int zhpe_offloaded_put_imm_to_iov(struct zhpe_offloaded_pe_root *pe_root, void *lbuf,
+			size_t llen, struct zhpe_offloaded_iov_state *rstate,
 			size_t *rem)
 {
-	struct zhpe_iov		liov = {
+	struct zhpe_offloaded_iov		liov = {
 		.iov_base = lbuf,
 		.iov_len = llen,
 	};
-	struct zhpe_iov_state	lstate = { .viov = &liov, .cnt = 1 };
+	struct zhpe_offloaded_iov_state	lstate = { .viov = &liov, .cnt = 1 };
 
 	if (llen > ZHPEQ_IMM_MAX)
 		return -FI_EINVAL;
 
-	return zhpe_iov_op(pe_root, &lstate, rstate, llen, 1,
-			   zhpe_iov_op_put, rem);
+	return zhpe_offloaded_iov_op(pe_root, &lstate, rstate, llen, 1,
+			   zhpe_offloaded_iov_op_put, rem);
 }
 
 
-int zhpe_iov_to_get_imm(struct zhpe_pe_root *pe_root,
-			size_t llen, struct zhpe_iov_state *rstate,
+int zhpe_offloaded_iov_to_get_imm(struct zhpe_offloaded_pe_root *pe_root,
+			size_t llen, struct zhpe_offloaded_iov_state *rstate,
 			size_t *rem)
 {
-	struct zhpe_iov		liov = {
+	struct zhpe_offloaded_iov		liov = {
 		.iov_len = llen,
 	};
-	struct zhpe_iov_state	lstate = { .viov = &liov, .cnt = 1 };
+	struct zhpe_offloaded_iov_state	lstate = { .viov = &liov, .cnt = 1 };
 
 	if (llen > ZHPEQ_IMM_MAX)
 		return -FI_EINVAL;
 
-	return zhpe_iov_op(pe_root, &lstate, rstate, llen, 1,
-			   zhpe_iov_op_get_imm, rem);
+	return zhpe_offloaded_iov_op(pe_root, &lstate, rstate, llen, 1,
+			   zhpe_offloaded_iov_op_get_imm, rem);
 }
 
-void zhpe_send_status_rem(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
+void zhpe_offloaded_send_status_rem(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
 			  int32_t status, uint64_t rem)
 {
-	struct zhpe_msg_status	msg_status;
+	struct zhpe_offloaded_msg_status	msg_status;
 
 	msg_status.rem = htobe64(rem);
 	msg_status.status = htonl(status);
 	msg_status.rem_valid = true;
-	ohdr.op_type = ZHPE_OP_STATUS;
+	ohdr.op_type = ZHPE_OFFLOADED_OP_STATUS;
 
-	zhpe_prov_op(conn, ohdr, ZHPE_PE_RETRY,
+	zhpe_offloaded_prov_op(conn, ohdr, ZHPE_OFFLOADED_PE_RETRY,
 		     &msg_status, sizeof(msg_status));
 }
 
-void zhpe_send_status(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
+void zhpe_offloaded_send_status(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
 		      int32_t status)
 {
-	struct zhpe_msg_status	msg_status;
+	struct zhpe_offloaded_msg_status	msg_status;
 
 	msg_status.status = htonl(status);
 	msg_status.rem_valid = false;
-	ohdr.op_type = ZHPE_OP_STATUS;
+	ohdr.op_type = ZHPE_OFFLOADED_OP_STATUS;
 
-	zhpe_prov_op(conn, ohdr, ZHPE_PE_RETRY,
+	zhpe_offloaded_prov_op(conn, ohdr, ZHPE_OFFLOADED_PE_RETRY,
 		     &msg_status, sizeof(msg_status));
 }
 
-void zhpe_send_key_revoke(struct zhpe_conn *conn,
-			  const struct zhpe_key *zkey)
+void zhpe_offloaded_send_key_revoke(struct zhpe_offloaded_conn *conn,
+			  const struct zhpe_offloaded_key *zkey)
 {
-	struct zhpe_msg_hdr	ohdr = {
-		.op_type	= ZHPE_OP_KEY_REVOKE,
+	struct zhpe_offloaded_msg_hdr	ohdr = {
+		.op_type	= ZHPE_OFFLOADED_OP_KEY_REVOKE,
 	};
-	struct zhpe_msg_key_request key_req;
+	struct zhpe_offloaded_msg_key_request key_req;
 
 	ohdr.seq = htons(atm_inc(&conn->kexp_seq));
 	key_req.zkeys[0].key = htobe64(zkey->key);
 	key_req.zkeys[0].internal = zkey->internal;
 
-	zhpe_prov_op(conn, ohdr, ZHPE_PE_RETRY,
+	zhpe_offloaded_prov_op(conn, ohdr, ZHPE_OFFLOADED_PE_RETRY,
 		     &key_req, sizeof(key_req.zkeys[0]));
 }
 
-static inline struct zhpe_rkey_data *conn_rkey_get(struct zhpe_conn *conn,
-						   const struct zhpe_key *zkey)
+static inline struct zhpe_offloaded_rkey_data *conn_rkey_get(struct zhpe_offloaded_conn *conn,
+						   const struct zhpe_offloaded_key *zkey)
 {
-	struct zhpe_rkey_data	*ret;
+	struct zhpe_offloaded_rkey_data	*ret;
 	RbtIterator		*rbt;
 
-	rbt = zhpe_zkey_rbtFind(conn->rkey_tree, zkey);
+	rbt = zhpe_offloaded_zkey_rbtFind(conn->rkey_tree, zkey);
 	if (!rbt)
 		return NULL;
-	ret = zhpe_rbtKeyValue(conn->rkey_tree, rbt);
+	ret = zhpe_offloaded_rbtKeyValue(conn->rkey_tree, rbt);
 	atm_inc(&ret->use_count);
 
 	return ret;
 }
 
-struct zhpe_rkey_data *zhpe_conn_rkey_get(struct zhpe_conn *conn,
-					  const struct zhpe_key *zkey)
+struct zhpe_offloaded_rkey_data *zhpe_offloaded_conn_rkey_get(struct zhpe_offloaded_conn *conn,
+					  const struct zhpe_offloaded_key *zkey)
 {
-	struct zhpe_rkey_data	*ret;
+	struct zhpe_offloaded_rkey_data	*ret;
 
 	ret = conn_rkey_get(conn, zkey);
 
 	return ret;
 }
 
-int zhpe_conn_key_export(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
-			 struct zhpe_mr *zmr)
+int zhpe_offloaded_conn_key_export(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
+			 struct zhpe_offloaded_mr *zmr)
 {
 	int			ret = 0;
-	struct zhpe_domain	*domain = conn->ep_attr->domain;
-	struct zhpe_kexp_data	*new = NULL;
-	struct zhpe_msg_key_data msg_data = { .key = htobe64(zmr->mr_fid.key) };
+	struct zhpe_offloaded_domain	*domain = conn->ep_attr->domain;
+	struct zhpe_offloaded_kexp_data	*new = NULL;
+	struct zhpe_offloaded_msg_key_data msg_data = { .key = htobe64(zmr->mr_fid.key) };
 	uint8_t			pe_flags = 0;
 	size_t			blob_len;
 	RbtIterator		*rbt;
@@ -1133,14 +1133,14 @@ int zhpe_conn_key_export(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 	uint16_t		seq;
 	size_t			pay_len;
 
-	rbt = zhpe_zkey_rbtFind(conn->kexp_tree, &zmr->zkey);
+	rbt = zhpe_offloaded_zkey_rbtFind(conn->kexp_tree, &zmr->zkey);
 
-	if (ohdr.op_type == ZHPE_OP_KEY_REQUEST) {
+	if (ohdr.op_type == ZHPE_OFFLOADED_OP_KEY_REQUEST) {
 		/* A response is always expected. */
-		ohdr.op_type = ZHPE_OP_KEY_RESPONSE;
+		ohdr.op_type = ZHPE_OFFLOADED_OP_KEY_RESPONSE;
 	} else if (!rbt)
 		/* Only send if we have not already done so. */
-		ohdr.op_type = ZHPE_OP_KEY_EXPORT;
+		ohdr.op_type = ZHPE_OFFLOADED_OP_KEY_EXPORT;
 	else
 		goto done;
 
@@ -1152,9 +1152,9 @@ int zhpe_conn_key_export(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 
 	seq = atm_inc(&conn->kexp_seq);
 	ohdr.seq = htons(seq);
-	pay_len = offsetof(struct zhpe_msg_key_data, blob) + blob_len;
-	ret = zhpe_prov_op(conn, ohdr, pe_flags, &msg_data, pay_len);
-	/* If zhpe_prov_op() returns -FI_EAGAIN, we don't want to create
+	pay_len = offsetof(struct zhpe_offloaded_msg_key_data, blob) + blob_len;
+	ret = zhpe_offloaded_prov_op(conn, ohdr, pe_flags, &msg_data, pay_len);
+	/* If zhpe_offloaded_prov_op() returns -FI_EAGAIN, we don't want to create
 	 * the rkey data. If KEY_EXPORT failed, we try to rewind the sequence;
 	 * if that can't be done, we must force it out to fill the sequence
 	 * remotely. We must also return -FI_EAGAIN to tell the caller to
@@ -1162,15 +1162,15 @@ int zhpe_conn_key_export(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 	 * hidden.
 	 */
 	if (ret == -FI_EAGAIN) {
-		if (ohdr.op_type == ZHPE_OP_KEY_REQUEST)
+		if (ohdr.op_type == ZHPE_OFFLOADED_OP_KEY_REQUEST)
 			ret = 0;
 		else {
 			seq++;
 			if (atm_cmpxchg(&conn->kexp_seq, &seq, seq - 1))
 				goto done;
 		}
-		pe_flags |= ZHPE_PE_RETRY;
-		rc = zhpe_prov_op(conn, ohdr, pe_flags, &msg_data, pay_len);
+		pe_flags |= ZHPE_OFFLOADED_PE_RETRY;
+		rc = zhpe_offloaded_prov_op(conn, ohdr, pe_flags, &msg_data, pay_len);
 		if (rc < 0)
 			ret = rc;
 		goto done;
@@ -1180,7 +1180,7 @@ int zhpe_conn_key_export(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 	/* Create rkey data. This is racy, but will become less so when
 	 * everything is sequenced.
 	 */
-	rbt = zhpe_zkey_rbtFind(conn->kexp_tree, &zmr->zkey);
+	rbt = zhpe_offloaded_zkey_rbtFind(conn->kexp_tree, &zmr->zkey);
 	if (!rbt) {
 		new = malloc(sizeof(*new));
 		if (!new) {
@@ -1189,7 +1189,7 @@ int zhpe_conn_key_export(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 		}
 		new->conn = conn;
 		new->zkey = zmr->zkey;
-		zhpe_kexp_rbtInsert(conn->kexp_tree, new);
+		zhpe_offloaded_kexp_rbtInsert(conn->kexp_tree, new);
 		fastlock_acquire(&domain->lock);
 		dlist_insert_tail(&new->lentry, &zmr->kexp_list);
 		fastlock_release(&domain->lock);
@@ -1199,41 +1199,41 @@ int zhpe_conn_key_export(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 	return ret;
 }
 
-static void process_rkey_revoke(struct zhpe_conn *conn,
-				const struct zhpe_key *zkey)
+static void process_rkey_revoke(struct zhpe_offloaded_conn *conn,
+				const struct zhpe_offloaded_key *zkey)
 {
 	RbtIterator		*rbt;
 
-	rbt = zhpe_zkey_rbtFind(conn->rkey_tree, zkey);
+	rbt = zhpe_offloaded_zkey_rbtFind(conn->rkey_tree, zkey);
 	if (rbt) {
-		zhpe_rkey_put(zhpe_rbtKeyValue(conn->rkey_tree, rbt));
+		zhpe_offloaded_rkey_put(zhpe_offloaded_rbtKeyValue(conn->rkey_tree, rbt));
 		rbtErase(conn->rkey_tree, rbt);
 	}
 }
 
-static void process_rkey_import(struct zhpe_conn *conn,
-				struct zhpe_rkey_data *new)
+static void process_rkey_import(struct zhpe_offloaded_conn *conn,
+				struct zhpe_offloaded_rkey_data *new)
 {
 	RbtIterator		*rbt;
 
-	rbt = zhpe_zkey_rbtFind(conn->rkey_tree, &new->zkey);
+	rbt = zhpe_offloaded_zkey_rbtFind(conn->rkey_tree, &new->zkey);
 	if (rbt) {
-		zhpe_rkey_put(zhpe_rbtKeyValue(conn->rkey_tree, rbt));
+		zhpe_offloaded_rkey_put(zhpe_offloaded_rbtKeyValue(conn->rkey_tree, rbt));
 		rbtErase(conn->rkey_tree, rbt);
 	}
-	zhpe_rkey_rbtInsert(conn->rkey_tree, new);
-	if (new->ohdr.op_type == ZHPE_OP_KEY_RESPONSE)
-		zhpe_pe_complete_key_response(conn, new->ohdr, 0);
+	zhpe_offloaded_rkey_rbtInsert(conn->rkey_tree, new);
+	if (new->ohdr.op_type == ZHPE_OFFLOADED_OP_KEY_RESPONSE)
+		zhpe_offloaded_pe_complete_key_response(conn, new->ohdr, 0);
 }
 
-static void process_rkey_deferred(struct zhpe_conn *conn)
+static void process_rkey_deferred(struct zhpe_offloaded_conn *conn)
 {
-	struct zhpe_rkey_data	*new;
+	struct zhpe_offloaded_rkey_data	*new;
 	struct dlist_entry      *dlist;
 
 	while (!dlist_empty(&conn->rkey_deferred_list)) {
 		dlist = conn->rkey_deferred_list.next;
-		new = container_of(dlist, struct zhpe_rkey_data, lentry);
+		new = container_of(dlist, struct zhpe_offloaded_rkey_data, lentry);
 		if (new->ohdr.seq != conn->rkey_seq)
 			break;
 		conn->rkey_seq++;
@@ -1241,7 +1241,7 @@ static void process_rkey_deferred(struct zhpe_conn *conn)
 
 		switch (new->ohdr.op_type) {
 
-		case ZHPE_OP_KEY_REVOKE:
+		case ZHPE_OFFLOADED_OP_KEY_REVOKE:
 			process_rkey_revoke(conn, &new->zkey);
 			free(new);
 			break;
@@ -1253,14 +1253,14 @@ static void process_rkey_deferred(struct zhpe_conn *conn)
 	}
 }
 
-static void insert_rkey_deferred(struct zhpe_conn *conn,
-				 struct zhpe_rkey_data *new)
+static void insert_rkey_deferred(struct zhpe_offloaded_conn *conn,
+				 struct zhpe_offloaded_rkey_data *new)
 {
 	struct dlist_entry      *dlist;
-	struct zhpe_rkey_data	*cur;
+	struct zhpe_offloaded_rkey_data	*cur;
 
 	dlist_foreach(&conn->rkey_deferred_list, dlist) {
-		cur = container_of(dlist, struct zhpe_rkey_data,  lentry);
+		cur = container_of(dlist, struct zhpe_offloaded_rkey_data,  lentry);
 		if (cur->ohdr.seq > new->ohdr.seq) {
 			dlist_insert_before(&new->lentry, &cur->lentry);
 			return;
@@ -1269,12 +1269,12 @@ static void insert_rkey_deferred(struct zhpe_conn *conn,
 	dlist_insert_tail(&new->lentry, &conn->rkey_deferred_list);
 }
 
-int zhpe_conn_rkey_import(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
+int zhpe_offloaded_conn_rkey_import(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
 			   uint64_t key, const void *blob, size_t blob_len,
-			   struct zhpe_rkey_data **rkey_out)
+			   struct zhpe_offloaded_rkey_data **rkey_out)
 {
 	int			ret = 0;
-	struct zhpe_rkey_data	*new = NULL;
+	struct zhpe_offloaded_rkey_data	*new = NULL;
 	struct zhpeq_key_data	*kdata = NULL;
 
 	ret = zhpeq_zmmu_import(zhpeq_dom(conn->ztx->zq), conn->zq_index,
@@ -1291,7 +1291,7 @@ int zhpe_conn_rkey_import(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 	atm_inc(&conn->ztx->use_count);
 	new->ztx = conn->ztx;
 	new->zkey.key = key;
-	new->zkey.internal = !!(kdata->z.access & ZHPE_MR_KEY_INT);
+	new->zkey.internal = !!(kdata->z.access & ZHPE_OFFLOADED_MR_KEY_INT);
 	new->kdata = kdata;
 	new->ohdr = ohdr;
 	new->use_count = 1;
@@ -1300,7 +1300,7 @@ int zhpe_conn_rkey_import(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 		*rkey_out = new;
 	}
 
-	if (ohdr.op_type != ZHPE_OP_NONE) {
+	if (ohdr.op_type != ZHPE_OFFLOADED_OP_NONE) {
 		if (ohdr.seq != conn->rkey_seq) {
 			insert_rkey_deferred(conn, new);
 			goto done;
@@ -1314,11 +1314,11 @@ int zhpe_conn_rkey_import(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
 	return ret;
 }
 
-int zhpe_conn_rkey_revoke(struct zhpe_conn *conn, struct zhpe_msg_hdr ohdr,
-			  const struct zhpe_key *zkey)
+int zhpe_offloaded_conn_rkey_revoke(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
+			  const struct zhpe_offloaded_key *zkey)
 {
 	int			ret = 0;
-	struct zhpe_rkey_data	*new = NULL;
+	struct zhpe_offloaded_rkey_data	*new = NULL;
 
 	ohdr.seq = ntohs(ohdr.seq);
 	if (ohdr.seq == conn->rkey_seq) {
@@ -1348,11 +1348,11 @@ static int check_read(size_t req, ssize_t res)
 
 	if (res == -1) {
 		ret = -errno;
-		ZHPE_LOG_ERROR("read(): error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("read(): error %d\n", ret);
 		goto done;
 	}
 	if (res != req) {
-		ZHPE_LOG_ERROR("read(): read %Ld of %Lu bytes\n",
+		ZHPE_OFFLOADED_LOG_ERROR("read(): read %Ld of %Lu bytes\n",
 			       (llong)res, (ullong)req);
 		ret = -EIO;
 		goto done;
@@ -1367,11 +1367,11 @@ static int check_write(size_t req, ssize_t res)
 
 	if (res == -1) {
 		ret = -errno;
-		ZHPE_LOG_ERROR("write(): error %d\n", ret);
+		ZHPE_OFFLOADED_LOG_ERROR("write(): error %d\n", ret);
 		goto done;
 	}
 	if (res != req) {
-		ZHPE_LOG_ERROR("write(): wrote %Ld of %Lu bytes\n",
+		ZHPE_OFFLOADED_LOG_ERROR("write(): wrote %Ld of %Lu bytes\n",
 			       (llong)res, (ullong)req);
 		ret = -EIO;
 		goto done;
@@ -1380,7 +1380,7 @@ static int check_write(size_t req, ssize_t res)
 	return ret;
 }
 
-int zhpe_send_blob(int sock_fd, const void *blob, size_t blob_len)
+int zhpe_offloaded_send_blob(int sock_fd, const void *blob, size_t blob_len)
 {
 	int			ret = -FI_EINVAL;
 	uint32_t		wlen = blob_len;
@@ -1408,7 +1408,7 @@ int zhpe_send_blob(int sock_fd, const void *blob, size_t blob_len)
 	return ret;
 }
 
-int zhpe_recv_fixed_blob(int sock_fd, void *blob, size_t blob_len)
+int zhpe_offloaded_recv_fixed_blob(int sock_fd, void *blob, size_t blob_len)
 {
 	int			ret;
 	uint32_t		wlen;
@@ -1422,7 +1422,7 @@ int zhpe_recv_fixed_blob(int sock_fd, void *blob, size_t blob_len)
 		goto done;
 	req = ntohl(wlen);
 	if (req != blob_len) {
-		ZHPE_LOG_ERROR("Expected %Lu bytes, saw %Lu\n",
+		ZHPE_OFFLOADED_LOG_ERROR("Expected %Lu bytes, saw %Lu\n",
 			       (ullong)blob_len, (ullong)res);
 		ret = -EINVAL;
 		goto done;
@@ -1438,7 +1438,7 @@ int zhpe_recv_fixed_blob(int sock_fd, void *blob, size_t blob_len)
 
 static int zmr_print(void *datap)
 {
-	struct zhpe_mr		*zmr = datap;
+	struct zhpe_offloaded_mr		*zmr = datap;
 
 	fprintf(stderr, "zmr  %p key 0x%Lx/%d use_count %d\n",
 		zmr, (ullong)zmr->zkey.key, zmr->zkey.internal, zmr->use_count);
@@ -1448,7 +1448,7 @@ static int zmr_print(void *datap)
 
 static int rkey_print(void *datap)
 {
-	struct zhpe_rkey_data	*rkey = datap;
+	struct zhpe_offloaded_rkey_data	*rkey = datap;
 
 	fprintf(stderr, "rkey %p key 0x%Lx/%d use_count %d\n",
 		rkey, (ullong)rkey->zkey.key, rkey->zkey.internal,
@@ -1459,7 +1459,7 @@ static int rkey_print(void *datap)
 
 static int kexp_print(void *datap)
 {
-	struct zhpe_kexp_data	*kexp = datap;
+	struct zhpe_offloaded_kexp_data	*kexp = datap;
 
 	fprintf(stderr, "kexp %p key 0x%Lx/%d conn %p\n",
 		kexp, (ullong)kexp->zkey.key, kexp->zkey.internal, kexp->conn);
@@ -1476,7 +1476,7 @@ static int tree_work(RbtHandle *tree, int (*work)(void *data))
 	if (!rbt)
 		return 0;
 	do {
-		ret = work(zhpe_rbtKeyValue(tree, rbt));
+		ret = work(zhpe_offloaded_rbtKeyValue(tree, rbt));
 		if (ret)
 			break;
 	} while ((rbt = rbtNext(tree, rbt)));
@@ -1484,17 +1484,17 @@ static int tree_work(RbtHandle *tree, int (*work)(void *data))
 	return ret;
 }
 
-void zhpe_zmr_dump(struct zhpe_domain *domain)
+void zhpe_offloaded_zmr_dump(struct zhpe_offloaded_domain *domain)
 {
 	tree_work(domain->mr_tree, zmr_print);
 }
 
-void zhpe_rkey_dump(struct zhpe_conn *conn)
+void zhpe_offloaded_rkey_dump(struct zhpe_offloaded_conn *conn)
 {
 	tree_work(conn->rkey_tree, rkey_print);
 }
 
-void zhpe_kexp_dump(struct zhpe_conn *conn)
+void zhpe_offloaded_kexp_dump(struct zhpe_offloaded_conn *conn)
 {
 	tree_work(conn->kexp_tree, kexp_print);
 }

@@ -30,8 +30,8 @@
  * SOFTWARE.
  */
 
-#ifndef _FI_EXT_ZHPE_H_
-#define _FI_EXT_ZHPE_H_
+#ifndef _FI_EXT_ZHPE_OFFLOADED_H_
+#define _FI_EXT_ZHPE_OFFLOADED_H_
 
 #include <rdma/fabric.h>
 
@@ -39,12 +39,12 @@
 extern "C" {
 #endif
 
-#define FI_ZHPE_OPS_V1		"zhpe_ops_v1"
+#define FI_ZHPE_OFFLOADED_OPS_V1		"zhpe_offloaded_ops_v1"
 
-#define FI_ZHPE_FAM_RKEY	(0)
+#define FI_ZHPE_OFFLOADED_FAM_RKEY	(0)
 
-/* zhpe provider specific ops */
-struct fi_zhpe_ext_ops_v1 {
+/* zhpe_offloaded provider specific ops */
+struct fi_zhpe_offloaded_ext_ops_v1 {
 	int (*lookup)(const char *url, void **sa, size_t *sa_len);
 };
 
@@ -52,4 +52,4 @@ struct fi_zhpe_ext_ops_v1 {
 }; /* extern "C" */
 #endif
 
-#endif /* _FI_EXT_ZHPE_H_ */
+#endif /* _FI_EXT_ZHPE_OFFLOADED_H_ */

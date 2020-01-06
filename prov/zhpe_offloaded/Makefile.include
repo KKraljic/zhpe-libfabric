@@ -1,0 +1,54 @@
+# Makefile.include for zhpe_offloaded provider
+
+if HAVE_ZHPE_OFFLOADED
+
+zhpe_offloaded_CPPFLAGS += -I$(top_srcdir)/prov/zhpe_offloaded/include -I$(top_srcdir)/prov/zhpe_offloaded
+
+_zhpe_offloaded_files = \
+	prov/zhpe_offloaded/src/zhpe_offloaded_av.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_dom.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_eq.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_cq.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_cntr.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_poll.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_wait.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_ep_rdm.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_ep_msg.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_fabric.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_ep.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_ctx.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_progress.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_conn.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_rma.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_msg.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_atomic.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_trigger.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_zq.c \
+	prov/zhpe_offloaded/src/zhpe_offloaded_mr_cache.c
+
+_zhpe_offloaded_headers = \
+	prov/zhpe_offloaded/include/zhpe_offloaded.h
+
+if HAVE_ZHPE_OFFLOADED_DL
+pkglib_LTLIBRARIES += libzhpe-fi.la
+libzhpe_offloaded_fi_la_SOURCES = $(_zhpe_offloaded_files) $(_zhpe_offloaded_headers) $(common_srcs)
+libzhpe_offloaded_fi_la_CPPFLAGS = $(AM_CPPFLAGS) $(zhpe_offloaded_CPPFLAGS) -g
+libzhpe_offloaded_fi_la_LDFLAGS = \
+    -module -avoid-version -shared -export-dynamic $(zhpe_offloaded_LDFLAGS)
+libzhpe_offloaded_fi_la_LIBADD = $(linkback) $(zhpe_offloaded_LIBS)
+libzhpe_offloaded_fi_la_DEPENDENCIES = $(linkback)
+else !HAVE_ZHPE_OFFLOADED_DL
+src_libfabric_la_SOURCES += $(_zhpe_offloaded_files) $(_zhpe_offloaded_headers)
+src_libfabric_la_CPPFLAGS += $(zhpe_offloaded_CPPFLAGS) -g
+src_libfabric_la_LDFLAGS += $(zhpe_offloaded_LDFLAGS)
+src_libfabric_la_LIBADD += $(zhpe_offloaded_LIBS)
+endif !HAVE_ZHPE_OFFLOADED_DL
+
+AM_LDFLAGS += $(zhpe_offloaded_LDFLAGS) $(zhpe_offloaded_LIBS)
+
+rdmainclude_HEADERS += \
+	prov/zhpe/include/fi_ext_zhpe.h
+
+#prov_install_man_pages += man/man7/fi_zhpe.7
+
+endif HAVE_ZHPE

@@ -34,15 +34,15 @@
 
 #include <zhpe.h>
 
-#define ZHPE_LOG_DBG(...) _ZHPE_LOG_DBG(FI_LOG_CQ, __VA_ARGS__)
-#define ZHPE_LOG_ERROR(...) _ZHPE_LOG_ERROR(FI_LOG_CQ, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_CQ, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_CQ, __VA_ARGS__)
 
-void zhpe_cq_add_tx_ctx(struct zhpe_cq *cq, struct zhpe_tx_ctx *tx_ctx)
+void zhpe_offloaded_cq_add_tx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
-	struct zhpe_tx_ctx	*curr_ctx;
+	struct zhpe_offloaded_tx_ctx	*curr_ctx;
 
 	fastlock_acquire(&cq->list_lock);
-	dlist_foreach_container(&cq->tx_list, struct zhpe_tx_ctx, curr_ctx,
+	dlist_foreach_container(&cq->tx_list, struct zhpe_offloaded_tx_ctx, curr_ctx,
 				cq_lentry) {
 		if (tx_ctx == curr_ctx)
 			goto out;
@@ -53,7 +53,7 @@ out:
 	fastlock_release(&cq->list_lock);
 }
 
-void zhpe_cq_remove_tx_ctx(struct zhpe_cq *cq, struct zhpe_tx_ctx *tx_ctx)
+void zhpe_offloaded_cq_remove_tx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
 	fastlock_acquire(&cq->list_lock);
 	dlist_remove(&tx_ctx->cq_lentry);
@@ -61,12 +61,12 @@ void zhpe_cq_remove_tx_ctx(struct zhpe_cq *cq, struct zhpe_tx_ctx *tx_ctx)
 	fastlock_release(&cq->list_lock);
 }
 
-void zhpe_cq_add_rx_ctx(struct zhpe_cq *cq, struct zhpe_rx_ctx *rx_ctx)
+void zhpe_offloaded_cq_add_rx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
-	struct zhpe_rx_ctx	*curr_ctx;
+	struct zhpe_offloaded_rx_ctx	*curr_ctx;
 
 	fastlock_acquire(&cq->list_lock);
-	dlist_foreach_container(&cq->rx_list, struct zhpe_rx_ctx, curr_ctx,
+	dlist_foreach_container(&cq->rx_list, struct zhpe_offloaded_rx_ctx, curr_ctx,
 				cq_lentry) {
 		if (rx_ctx == curr_ctx)
 			goto out;
@@ -77,7 +77,7 @@ out:
 	fastlock_release(&cq->list_lock);
 }
 
-void zhpe_cq_remove_rx_ctx(struct zhpe_cq *cq, struct zhpe_rx_ctx *rx_ctx)
+void zhpe_offloaded_cq_remove_rx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
 	fastlock_acquire(&cq->list_lock);
 	dlist_remove(&rx_ctx->cq_lentry);
@@ -85,40 +85,40 @@ void zhpe_cq_remove_rx_ctx(struct zhpe_cq *cq, struct zhpe_rx_ctx *rx_ctx)
 	fastlock_release(&cq->list_lock);
 }
 
-int zhpe_cq_progress(struct zhpe_cq *cq)
+int zhpe_offloaded_cq_progress(struct zhpe_offloaded_cq *cq)
 {
-	struct zhpe_tx_ctx	*tx_ctx;
-	struct zhpe_rx_ctx	*rx_ctx;
+	struct zhpe_offloaded_tx_ctx	*tx_ctx;
+	struct zhpe_offloaded_rx_ctx	*rx_ctx;
 
 	if (cq->domain->progress_mode == FI_PROGRESS_AUTO)
 		return 0;
 
 	fastlock_acquire(&cq->list_lock);
-	dlist_foreach_container(&cq->tx_list, struct zhpe_tx_ctx, tx_ctx,
+	dlist_foreach_container(&cq->tx_list, struct zhpe_offloaded_tx_ctx, tx_ctx,
 				cq_lentry) {
 		if (!tx_ctx->enabled)
 			continue;
 
-		zhpe_pe_progress_tx_ctx(cq->domain->pe, tx_ctx);
+		zhpe_offloaded_pe_progress_tx_ctx(cq->domain->pe, tx_ctx);
 	}
 
-	dlist_foreach_container(&cq->rx_list, struct zhpe_rx_ctx, rx_ctx,
+	dlist_foreach_container(&cq->rx_list, struct zhpe_offloaded_rx_ctx, rx_ctx,
 				cq_lentry) {
 		if (!rx_ctx->enabled)
 			continue;
 
-		zhpe_pe_progress_rx_ctx(cq->domain->pe, rx_ctx);
+		zhpe_offloaded_pe_progress_rx_ctx(cq->domain->pe, rx_ctx);
 	}
 	fastlock_release(&cq->list_lock);
 
 	return 0;
 }
 
-static ssize_t zhpe_cq_entry_size(struct zhpe_cq *zhpe_cq)
+static ssize_t zhpe_offloaded_cq_entry_size(struct zhpe_offloaded_cq *zhpe_offloaded_cq)
 {
 	ssize_t size;
 
-	switch (zhpe_cq->attr.format) {
+	switch (zhpe_offloaded_cq->attr.format) {
 	case FI_CQ_FORMAT_CONTEXT:
 		size = sizeof(struct fi_cq_entry);
 		break;
@@ -138,21 +138,21 @@ static ssize_t zhpe_cq_entry_size(struct zhpe_cq *zhpe_cq)
 	case FI_CQ_FORMAT_UNSPEC:
 	default:
 		size = -1;
-		ZHPE_LOG_ERROR("Invalid CQ format\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid CQ format\n");
 		break;
 	}
 	return size;
 }
 
-static ssize_t _zhpe_cq_write(struct zhpe_cq *cq, fi_addr_t addr,
+static ssize_t _zhpe_offloaded_cq_write(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 			      const void *buf, size_t len)
 {
 	ssize_t ret;
-	struct zhpe_cq_overflow_entry_t *overflow_entry;
+	struct zhpe_offloaded_cq_overflow_entry_t *overflow_entry;
 
 	fastlock_acquire(&cq->lock);
 	if (ofi_rbfdavail(&cq->cq_rbfd) < len) {
-		ZHPE_LOG_ERROR("Not enough space in CQ\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Not enough space in CQ\n");
 		overflow_entry = calloc(1, sizeof(*overflow_entry) + len);
 		if (!overflow_entry) {
 			ret = -FI_ENOSPC;
@@ -180,23 +180,23 @@ static ssize_t _zhpe_cq_write(struct zhpe_cq *cq, fi_addr_t addr,
 	ret = len;
 
 	if (cq->signal)
-		zhpe_wait_signal(cq->waitset);
+		zhpe_offloaded_wait_signal(cq->waitset);
 out:
 	fastlock_release(&cq->lock);
 	return ret;
 }
 
-static int zhpe_cq_report_context(struct zhpe_cq *cq, fi_addr_t addr,
+static int zhpe_offloaded_cq_report_context(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 				  struct fi_cq_tagged_entry *tcqe)
 {
 	struct fi_cq_entry	cq_entry;
 
 	cq_entry.op_context = tcqe->op_context;
 
-	return _zhpe_cq_write(cq, addr, &cq_entry, sizeof(cq_entry));
+	return _zhpe_offloaded_cq_write(cq, addr, &cq_entry, sizeof(cq_entry));
 }
 
-static uint64_t zhpe_cq_sanitize_flags(uint64_t flags)
+static uint64_t zhpe_offloaded_cq_sanitize_flags(uint64_t flags)
 {
 	return (flags & (FI_SEND | FI_RECV | FI_RMA | FI_ATOMIC |
 			 FI_MSG | FI_TAGGED | FI_READ | FI_WRITE |
@@ -204,74 +204,74 @@ static uint64_t zhpe_cq_sanitize_flags(uint64_t flags)
 			 FI_REMOTE_CQ_DATA | FI_MULTI_RECV));
 }
 
-static int zhpe_cq_report_msg(struct zhpe_cq *cq, fi_addr_t addr,
+static int zhpe_offloaded_cq_report_msg(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 			      struct fi_cq_tagged_entry *tcqe)
 {
 	struct fi_cq_msg_entry	cq_entry;
 
 	cq_entry.op_context = tcqe->op_context;
-	cq_entry.flags = zhpe_cq_sanitize_flags(tcqe->flags);
+	cq_entry.flags = zhpe_offloaded_cq_sanitize_flags(tcqe->flags);
 	cq_entry.len = tcqe->len;
 
-	return _zhpe_cq_write(cq, addr, &cq_entry, sizeof(cq_entry));
+	return _zhpe_offloaded_cq_write(cq, addr, &cq_entry, sizeof(cq_entry));
 }
 
-static int zhpe_cq_report_data(struct zhpe_cq *cq, fi_addr_t addr,
+static int zhpe_offloaded_cq_report_data(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 			       struct fi_cq_tagged_entry *tcqe)
 {
 	struct fi_cq_data_entry	cq_entry;
 
 	cq_entry.op_context = tcqe->op_context;
-	cq_entry.flags = zhpe_cq_sanitize_flags(tcqe->flags);
+	cq_entry.flags = zhpe_offloaded_cq_sanitize_flags(tcqe->flags);
 	cq_entry.len = tcqe->len;
 	cq_entry.buf = tcqe->buf;
 	cq_entry.data = tcqe->data;
 
-	return _zhpe_cq_write(cq, addr, &cq_entry, sizeof(cq_entry));
+	return _zhpe_offloaded_cq_write(cq, addr, &cq_entry, sizeof(cq_entry));
 }
 
-static int zhpe_cq_report_tagged(struct zhpe_cq *cq, fi_addr_t addr,
+static int zhpe_offloaded_cq_report_tagged(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 				 struct fi_cq_tagged_entry *tcqe)
 {
-	tcqe->flags = zhpe_cq_sanitize_flags(tcqe->flags);
+	tcqe->flags = zhpe_offloaded_cq_sanitize_flags(tcqe->flags);
 
-	return _zhpe_cq_write(cq, addr, tcqe, sizeof(*tcqe));
+	return _zhpe_offloaded_cq_write(cq, addr, tcqe, sizeof(*tcqe));
 }
 
-static void zhpe_cq_set_report_fn(struct zhpe_cq *zhpe_cq)
+static void zhpe_offloaded_cq_set_report_fn(struct zhpe_offloaded_cq *zhpe_offloaded_cq)
 {
-	switch (zhpe_cq->attr.format) {
+	switch (zhpe_offloaded_cq->attr.format) {
 	case FI_CQ_FORMAT_CONTEXT:
-		zhpe_cq->report_completion = &zhpe_cq_report_context;
+		zhpe_offloaded_cq->report_completion = &zhpe_offloaded_cq_report_context;
 		break;
 
 	case FI_CQ_FORMAT_MSG:
-		zhpe_cq->report_completion = &zhpe_cq_report_msg;
+		zhpe_offloaded_cq->report_completion = &zhpe_offloaded_cq_report_msg;
 		break;
 
 	case FI_CQ_FORMAT_DATA:
-		zhpe_cq->report_completion = &zhpe_cq_report_data;
+		zhpe_offloaded_cq->report_completion = &zhpe_offloaded_cq_report_data;
 		break;
 
 	case FI_CQ_FORMAT_TAGGED:
-		zhpe_cq->report_completion = &zhpe_cq_report_tagged;
+		zhpe_offloaded_cq->report_completion = &zhpe_offloaded_cq_report_tagged;
 		break;
 
 	case FI_CQ_FORMAT_UNSPEC:
 	default:
-		ZHPE_LOG_ERROR("Invalid CQ format\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid CQ format\n");
 		break;
 	}
 }
 
-static inline void zhpe_cq_copy_overflow_list(struct zhpe_cq *cq, size_t count)
+static inline void zhpe_offloaded_cq_copy_overflow_list(struct zhpe_offloaded_cq *cq, size_t count)
 {
 	size_t i;
-	struct zhpe_cq_overflow_entry_t *overflow_entry;
+	struct zhpe_offloaded_cq_overflow_entry_t *overflow_entry;
 
 	for (i = 0; i < count && !dlist_empty(&cq->overflow_list); i++) {
 		overflow_entry = container_of(cq->overflow_list.next,
-					      struct zhpe_cq_overflow_entry_t,
+					      struct zhpe_offloaded_cq_overflow_entry_t,
 					      lentry);
 		ofi_rbwrite(&cq->addr_rb, &overflow_entry->addr,
 			    sizeof(fi_addr_t));
@@ -289,7 +289,7 @@ static inline void zhpe_cq_copy_overflow_list(struct zhpe_cq *cq, size_t count)
 	}
 }
 
-static inline ssize_t zhpe_cq_rbuf_read(struct zhpe_cq *cq, void *buf,
+static inline ssize_t zhpe_offloaded_cq_rbuf_read(struct zhpe_offloaded_cq *cq, void *buf,
 					size_t count, fi_addr_t *src_addr,
 					size_t cq_entry_len)
 {
@@ -302,43 +302,43 @@ static inline ssize_t zhpe_cq_rbuf_read(struct zhpe_cq *cq, void *buf,
 		if (src_addr)
 			src_addr[i] = addr;
 	}
-	zhpe_cq_copy_overflow_list(cq, count);
+	zhpe_offloaded_cq_copy_overflow_list(cq, count);
 	return count;
 }
 
-static ssize_t zhpe_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t count,
+static ssize_t zhpe_offloaded_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t count,
 				 fi_addr_t *src_addr, const void *cond,
 				 int timeout)
 {
 	int ret = 0;
 	size_t threshold;
-	struct zhpe_cq *zhpe_cq;
+	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
 	uint64_t start_ms;
 	ssize_t cq_entry_len, avail;
 
-	zhpe_cq = container_of(cq, struct zhpe_cq, cq_fid);
-	if (ofi_rbused(&zhpe_cq->cqerr_rb))
+	zhpe_offloaded_cq = container_of(cq, struct zhpe_offloaded_cq, cq_fid);
+	if (ofi_rbused(&zhpe_offloaded_cq->cqerr_rb))
 		return -FI_EAVAIL;
 
-	cq_entry_len = zhpe_cq->cq_entry_size;
-	if (zhpe_cq->attr.wait_cond == FI_CQ_COND_THRESHOLD)
+	cq_entry_len = zhpe_offloaded_cq->cq_entry_size;
+	if (zhpe_offloaded_cq->attr.wait_cond == FI_CQ_COND_THRESHOLD)
 		threshold = MIN((uintptr_t) cond, count);
 	else
 		threshold = count;
 
 	start_ms = (timeout > 0) ? fi_gettime_ms() : 0;
 
-	if (zhpe_cq->domain->progress_mode == FI_PROGRESS_MANUAL) {
+	if (zhpe_offloaded_cq->domain->progress_mode == FI_PROGRESS_MANUAL) {
 		while (1) {
-			zhpe_cq_progress(zhpe_cq);
-			fastlock_acquire(&zhpe_cq->lock);
-			avail = ofi_rbfdused(&zhpe_cq->cq_rbfd);
+			zhpe_offloaded_cq_progress(zhpe_offloaded_cq);
+			fastlock_acquire(&zhpe_offloaded_cq->lock);
+			avail = ofi_rbfdused(&zhpe_offloaded_cq->cq_rbfd);
 			if (avail) {
-				ret = zhpe_cq_rbuf_read(zhpe_cq, buf,
+				ret = zhpe_offloaded_cq_rbuf_read(zhpe_offloaded_cq, buf,
 					MIN(threshold, (size_t)(avail / cq_entry_len)),
 					src_addr, cq_entry_len);
 			}
-			fastlock_release(&zhpe_cq->lock);
+			fastlock_release(&zhpe_offloaded_cq->lock);
 			if (ret)
 				return ret;
 
@@ -349,24 +349,24 @@ static ssize_t zhpe_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t count,
 			} else if (!timeout)
 				return -FI_EAGAIN;
 
-			if (atm_load_rlx(&zhpe_cq->signaled)) {
-				atm_store_rlx(&zhpe_cq->signaled, 0);
+			if (atm_load_rlx(&zhpe_offloaded_cq->signaled)) {
+				atm_store_rlx(&zhpe_offloaded_cq->signaled, 0);
 				return -FI_ECANCELED;
 			}
 		};
 	} else {
 		do {
-			fastlock_acquire(&zhpe_cq->lock);
+			fastlock_acquire(&zhpe_offloaded_cq->lock);
 			ret = 0;
-			avail = ofi_rbfdused(&zhpe_cq->cq_rbfd);
+			avail = ofi_rbfdused(&zhpe_offloaded_cq->cq_rbfd);
 			if (avail) {
-				ret = zhpe_cq_rbuf_read(zhpe_cq, buf,
+				ret = zhpe_offloaded_cq_rbuf_read(zhpe_offloaded_cq, buf,
 					MIN(threshold, (size_t)(avail / cq_entry_len)),
 					src_addr, cq_entry_len);
 			} else { /* No CQ entry available, read the fd */
-				ofi_rbfdreset(&zhpe_cq->cq_rbfd);
+				ofi_rbfdreset(&zhpe_offloaded_cq->cq_rbfd);
 			}
-			fastlock_release(&zhpe_cq->lock);
+			fastlock_release(&zhpe_offloaded_cq->lock);
 			if (ret && ret != -FI_EAGAIN)
 				return ret;
 
@@ -378,52 +378,52 @@ static ssize_t zhpe_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t count,
 				return -FI_EAGAIN;
 
 
-			if (atm_load_rlx(&zhpe_cq->signaled)) {
-				atm_store_rlx(&zhpe_cq->signaled, 0);
+			if (atm_load_rlx(&zhpe_offloaded_cq->signaled)) {
+				atm_store_rlx(&zhpe_offloaded_cq->signaled, 0);
 				return -FI_ECANCELED;
 			}
-			ret = ofi_rbfdwait(&zhpe_cq->cq_rbfd, timeout);
+			ret = ofi_rbfdwait(&zhpe_offloaded_cq->cq_rbfd, timeout);
 		} while (ret > 0);
 	}
 
 	return (ret == 0 || ret == -FI_ETIMEDOUT) ? -FI_EAGAIN : ret;
 }
 
-static ssize_t zhpe_cq_sread(struct fid_cq *cq, void *buf, size_t len,
+static ssize_t zhpe_offloaded_cq_sread(struct fid_cq *cq, void *buf, size_t len,
 			     const void *cond, int timeout)
 {
-	return zhpe_cq_sreadfrom(cq, buf, len, NULL, cond, timeout);
+	return zhpe_offloaded_cq_sreadfrom(cq, buf, len, NULL, cond, timeout);
 }
 
-static ssize_t zhpe_cq_readfrom(struct fid_cq *cq, void *buf, size_t count,
+static ssize_t zhpe_offloaded_cq_readfrom(struct fid_cq *cq, void *buf, size_t count,
 			fi_addr_t *src_addr)
 {
-	return zhpe_cq_sreadfrom(cq, buf, count, src_addr, NULL, 0);
+	return zhpe_offloaded_cq_sreadfrom(cq, buf, count, src_addr, NULL, 0);
 }
 
-static ssize_t zhpe_cq_read(struct fid_cq *cq, void *buf, size_t count)
+static ssize_t zhpe_offloaded_cq_read(struct fid_cq *cq, void *buf, size_t count)
 {
-	return zhpe_cq_readfrom(cq, buf, count, NULL);
+	return zhpe_offloaded_cq_readfrom(cq, buf, count, NULL);
 }
 
-static ssize_t zhpe_cq_readerr(struct fid_cq *cq, struct fi_cq_err_entry *buf,
+static ssize_t zhpe_offloaded_cq_readerr(struct fid_cq *cq, struct fi_cq_err_entry *buf,
 			       uint64_t flags)
 {
-	struct zhpe_cq *zhpe_cq;
+	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
 	ssize_t ret;
 	struct fi_cq_err_entry entry;
 	uint32_t api_version;
 	size_t err_data_size = 0;
 	void *err_data = NULL;
 
-	zhpe_cq = container_of(cq, struct zhpe_cq, cq_fid);
-	if (zhpe_cq->domain->progress_mode == FI_PROGRESS_MANUAL)
-		zhpe_cq_progress(zhpe_cq);
+	zhpe_offloaded_cq = container_of(cq, struct zhpe_offloaded_cq, cq_fid);
+	if (zhpe_offloaded_cq->domain->progress_mode == FI_PROGRESS_MANUAL)
+		zhpe_offloaded_cq_progress(zhpe_offloaded_cq);
 
-	fastlock_acquire(&zhpe_cq->lock);
-	if (ofi_rbused(&zhpe_cq->cqerr_rb) >= sizeof(struct fi_cq_err_entry)) {
-		api_version = zhpe_cq->domain->fab->fab_fid.api_version;
-		ofi_rbread(&zhpe_cq->cqerr_rb, &entry, sizeof(entry));
+	fastlock_acquire(&zhpe_offloaded_cq->lock);
+	if (ofi_rbused(&zhpe_offloaded_cq->cqerr_rb) >= sizeof(struct fi_cq_err_entry)) {
+		api_version = zhpe_offloaded_cq->domain->fab->fab_fid.api_version;
+		ofi_rbread(&zhpe_offloaded_cq->cqerr_rb, &entry, sizeof(entry));
 
 		if ((FI_VERSION_GE(api_version, FI_VERSION(1, 5)))
 			&& buf->err_data && buf->err_data_size) {
@@ -445,11 +445,11 @@ static ssize_t zhpe_cq_readerr(struct fid_cq *cq, struct fi_cq_err_entry *buf,
 	} else {
 		ret = -FI_EAGAIN;
 	}
-	fastlock_release(&zhpe_cq->lock);
+	fastlock_release(&zhpe_offloaded_cq->lock);
 	return ret;
 }
 
-static const char *zhpe_cq_strerror(struct fid_cq *cq, int prov_errno,
+static const char *zhpe_offloaded_cq_strerror(struct fid_cq *cq, int prov_errno,
 			      const void *err_data, char *buf, size_t len)
 {
 	if (buf && len)
@@ -457,16 +457,16 @@ static const char *zhpe_cq_strerror(struct fid_cq *cq, int prov_errno,
 	return fi_strerror(prov_errno);
 }
 
-static int zhpe_cq_close(struct fid *fid)
+static int zhpe_offloaded_cq_close(struct fid *fid)
 {
-	struct zhpe_cq *cq;
+	struct zhpe_offloaded_cq *cq;
 
-	cq = container_of(fid, struct zhpe_cq, cq_fid.fid);
+	cq = container_of(fid, struct zhpe_offloaded_cq, cq_fid.fid);
 	if (atm_load_rlx(&cq->ref))
 		return -FI_EBUSY;
 
 	if (cq->signal && cq->attr.wait_obj == FI_WAIT_MUTEX_COND)
-		zhpe_wait_close(&cq->waitset->fid);
+		zhpe_offloaded_wait_close(&cq->waitset->fid);
 
 	ofi_rbfree(&cq->addr_rb);
 	ofi_rbfree(&cq->cqerr_rb);
@@ -480,35 +480,35 @@ static int zhpe_cq_close(struct fid *fid)
 	return 0;
 }
 
-static int zhpe_cq_signal(struct fid_cq *cq)
+static int zhpe_offloaded_cq_signal(struct fid_cq *cq)
 {
-	struct zhpe_cq *zhpe_cq;
-	zhpe_cq = container_of(cq, struct zhpe_cq, cq_fid);
+	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
+	zhpe_offloaded_cq = container_of(cq, struct zhpe_offloaded_cq, cq_fid);
 
-	atm_store_rlx(&zhpe_cq->signaled, 1);
-	fastlock_acquire(&zhpe_cq->lock);
-	ofi_rbfdsignal(&zhpe_cq->cq_rbfd);
-	fastlock_release(&zhpe_cq->lock);
+	atm_store_rlx(&zhpe_offloaded_cq->signaled, 1);
+	fastlock_acquire(&zhpe_offloaded_cq->lock);
+	ofi_rbfdsignal(&zhpe_offloaded_cq->cq_rbfd);
+	fastlock_release(&zhpe_offloaded_cq->lock);
 	return 0;
 }
 
-static struct fi_ops_cq zhpe_cq_ops = {
+static struct fi_ops_cq zhpe_offloaded_cq_ops = {
 	.size = sizeof(struct fi_ops_cq),
-	.read = zhpe_cq_read,
-	.readfrom = zhpe_cq_readfrom,
-	.readerr = zhpe_cq_readerr,
-	.sread = zhpe_cq_sread,
-	.sreadfrom = zhpe_cq_sreadfrom,
-	.signal = zhpe_cq_signal,
-	.strerror = zhpe_cq_strerror,
+	.read = zhpe_offloaded_cq_read,
+	.readfrom = zhpe_offloaded_cq_readfrom,
+	.readerr = zhpe_offloaded_cq_readerr,
+	.sread = zhpe_offloaded_cq_sread,
+	.sreadfrom = zhpe_offloaded_cq_sreadfrom,
+	.signal = zhpe_offloaded_cq_signal,
+	.strerror = zhpe_offloaded_cq_strerror,
 };
 
-static int zhpe_cq_control(struct fid *fid, int command, void *arg)
+static int zhpe_offloaded_cq_control(struct fid *fid, int command, void *arg)
 {
-	struct zhpe_cq *cq;
+	struct zhpe_offloaded_cq *cq;
 	int ret = 0;
 
-	cq = container_of(fid, struct zhpe_cq, cq_fid.fid);
+	cq = container_of(fid, struct zhpe_offloaded_cq, cq_fid.fid);
 	switch (command) {
 	case FI_GETWAIT:
 		if (cq->domain->progress_mode == FI_PROGRESS_MANUAL)
@@ -524,7 +524,7 @@ static int zhpe_cq_control(struct fid *fid, int command, void *arg)
 
 		case FI_WAIT_SET:
 		case FI_WAIT_MUTEX_COND:
-			zhpe_wait_get_obj(cq->waitset, arg);
+			zhpe_offloaded_wait_get_obj(cq->waitset, arg);
 			break;
 
 		default:
@@ -541,15 +541,15 @@ static int zhpe_cq_control(struct fid *fid, int command, void *arg)
 	return ret;
 }
 
-static struct fi_ops zhpe_cq_fi_ops = {
+static struct fi_ops zhpe_offloaded_cq_fi_ops = {
 	.size = sizeof(struct fi_ops),
-	.close = zhpe_cq_close,
+	.close = zhpe_offloaded_cq_close,
 	.bind = fi_no_bind,
-	.control = zhpe_cq_control,
+	.control = zhpe_offloaded_cq_control,
 	.ops_open = fi_no_ops_open,
 };
 
-static int zhpe_cq_verify_attr(struct fi_cq_attr *attr)
+static int zhpe_offloaded_cq_verify_attr(struct fi_cq_attr *attr)
 {
 	if (!attr)
 		return 0;
@@ -583,8 +583,8 @@ static int zhpe_cq_verify_attr(struct fi_cq_attr *attr)
 	return 0;
 }
 
-static struct fi_cq_attr _zhpe_cq_def_attr = {
-	.size = ZHPE_CQ_DEF_SZ,
+static struct fi_cq_attr _zhpe_offloaded_cq_def_attr = {
+	.size = ZHPE_OFFLOADED_CQ_DEF_SZ,
 	.flags = 0,
 	.format = FI_CQ_FORMAT_CONTEXT,
 	.wait_obj = FI_WAIT_FD,
@@ -593,65 +593,65 @@ static struct fi_cq_attr _zhpe_cq_def_attr = {
 	.wait_set = NULL,
 };
 
-int zhpe_cq_open(struct fid_domain *domain, struct fi_cq_attr *attr,
+int zhpe_offloaded_cq_open(struct fid_domain *domain, struct fi_cq_attr *attr,
 		 struct fid_cq **cq, void *context)
 {
-	struct zhpe_domain *zhpe_dom;
-	struct zhpe_cq *zhpe_cq;
+	struct zhpe_offloaded_domain *zhpe_offloaded_dom;
+	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
 	struct fi_wait_attr wait_attr;
-	struct zhpe_fid_list *list_entry;
-	struct zhpe_wait *wait;
+	struct zhpe_offloaded_fid_list *list_entry;
+	struct zhpe_offloaded_wait *wait;
 	int ret;
 
-	zhpe_dom = container_of(domain, struct zhpe_domain, dom_fid);
-	ret = zhpe_cq_verify_attr(attr);
+	zhpe_offloaded_dom = container_of(domain, struct zhpe_offloaded_domain, dom_fid);
+	ret = zhpe_offloaded_cq_verify_attr(attr);
 	if (ret)
 		return ret;
 
-	zhpe_cq = calloc_cachealigned(1, sizeof(*zhpe_cq));
-	if (!zhpe_cq)
+	zhpe_offloaded_cq = calloc_cachealigned(1, sizeof(*zhpe_offloaded_cq));
+	if (!zhpe_offloaded_cq)
 		return -FI_ENOMEM;
 
-	zhpe_cq->cq_fid.fid.fclass = FI_CLASS_CQ;
-	zhpe_cq->cq_fid.fid.context = context;
-	zhpe_cq->cq_fid.fid.ops = &zhpe_cq_fi_ops;
-	zhpe_cq->cq_fid.ops = &zhpe_cq_ops;
+	zhpe_offloaded_cq->cq_fid.fid.fclass = FI_CLASS_CQ;
+	zhpe_offloaded_cq->cq_fid.fid.context = context;
+	zhpe_offloaded_cq->cq_fid.fid.ops = &zhpe_offloaded_cq_fi_ops;
+	zhpe_offloaded_cq->cq_fid.ops = &zhpe_offloaded_cq_ops;
 
 	if (attr == NULL) {
-		zhpe_cq->attr = _zhpe_cq_def_attr;
+		zhpe_offloaded_cq->attr = _zhpe_offloaded_cq_def_attr;
 	} else {
-		zhpe_cq->attr = *attr;
+		zhpe_offloaded_cq->attr = *attr;
 		if (attr->size == 0)
-			zhpe_cq->attr.size = _zhpe_cq_def_attr.size;
+			zhpe_offloaded_cq->attr.size = _zhpe_offloaded_cq_def_attr.size;
 	}
 
-	zhpe_cq->domain = zhpe_dom;
-	zhpe_cq->cq_entry_size = zhpe_cq_entry_size(zhpe_cq);
-	zhpe_cq_set_report_fn(zhpe_cq);
+	zhpe_offloaded_cq->domain = zhpe_offloaded_dom;
+	zhpe_offloaded_cq->cq_entry_size = zhpe_offloaded_cq_entry_size(zhpe_offloaded_cq);
+	zhpe_offloaded_cq_set_report_fn(zhpe_offloaded_cq);
 
-	dlist_init(&zhpe_cq->tx_list);
-	dlist_init(&zhpe_cq->rx_list);
-	dlist_init(&zhpe_cq->ep_list);
-	dlist_init(&zhpe_cq->overflow_list);
+	dlist_init(&zhpe_offloaded_cq->tx_list);
+	dlist_init(&zhpe_offloaded_cq->rx_list);
+	dlist_init(&zhpe_offloaded_cq->ep_list);
+	dlist_init(&zhpe_offloaded_cq->overflow_list);
 
-	ret = ofi_rbfdinit(&zhpe_cq->cq_rbfd, zhpe_cq->attr.size *
-			zhpe_cq->cq_entry_size);
+	ret = ofi_rbfdinit(&zhpe_offloaded_cq->cq_rbfd, zhpe_offloaded_cq->attr.size *
+			zhpe_offloaded_cq->cq_entry_size);
 	if (ret)
 		goto err1;
 
-	ret = ofi_rbinit(&zhpe_cq->addr_rb,
-			zhpe_cq->attr.size * sizeof(fi_addr_t));
+	ret = ofi_rbinit(&zhpe_offloaded_cq->addr_rb,
+			zhpe_offloaded_cq->attr.size * sizeof(fi_addr_t));
 	if (ret)
 		goto err2;
 
-	ret = ofi_rbinit(&zhpe_cq->cqerr_rb, zhpe_cq->attr.size *
+	ret = ofi_rbinit(&zhpe_offloaded_cq->cqerr_rb, zhpe_offloaded_cq->attr.size *
 			sizeof(struct fi_cq_err_entry));
 	if (ret)
 		goto err3;
 
-	fastlock_init(&zhpe_cq->lock);
+	fastlock_init(&zhpe_offloaded_cq->lock);
 
-	switch (zhpe_cq->attr.wait_obj) {
+	switch (zhpe_offloaded_cq->attr.wait_obj) {
 	case FI_WAIT_NONE:
 	case FI_WAIT_UNSPEC:
 	case FI_WAIT_FD:
@@ -660,13 +660,13 @@ int zhpe_cq_open(struct fid_domain *domain, struct fi_cq_attr *attr,
 	case FI_WAIT_MUTEX_COND:
 		wait_attr.flags = 0;
 		wait_attr.wait_obj = FI_WAIT_MUTEX_COND;
-		ret = zhpe_wait_open(&zhpe_dom->fab->fab_fid, &wait_attr,
-				     &zhpe_cq->waitset);
+		ret = zhpe_offloaded_wait_open(&zhpe_offloaded_dom->fab->fab_fid, &wait_attr,
+				     &zhpe_offloaded_cq->waitset);
 		if (ret) {
 			ret = -FI_EINVAL;
 			goto err4;
 		}
-		zhpe_cq->signal = 1;
+		zhpe_offloaded_cq->signal = 1;
 		break;
 
 	case FI_WAIT_SET:
@@ -675,17 +675,17 @@ int zhpe_cq_open(struct fid_domain *domain, struct fi_cq_attr *attr,
 			goto err4;
 		}
 
-		zhpe_cq->waitset = attr->wait_set;
-		zhpe_cq->signal = 1;
+		zhpe_offloaded_cq->waitset = attr->wait_set;
+		zhpe_offloaded_cq->signal = 1;
 		wait = container_of(attr->wait_set,
-				    struct zhpe_wait, wait_fid);
+				    struct zhpe_offloaded_wait, wait_fid);
 		list_entry = calloc(1, sizeof(*list_entry));
 		if (!list_entry) {
 			ret = -FI_ENOMEM;
 			goto err4;
 		}
 		dlist_init(&list_entry->lentry);
-		list_entry->fid = &zhpe_cq->cq_fid.fid;
+		list_entry->fid = &zhpe_offloaded_cq->cq_fid.fid;
 		dlist_insert_after(&list_entry->lentry, &wait->fid_list);
 		break;
 
@@ -693,24 +693,24 @@ int zhpe_cq_open(struct fid_domain *domain, struct fi_cq_attr *attr,
 		break;
 	}
 
-	*cq = &zhpe_cq->cq_fid;
-	atm_inc(&zhpe_dom->ref);
-	fastlock_init(&zhpe_cq->list_lock);
+	*cq = &zhpe_offloaded_cq->cq_fid;
+	atm_inc(&zhpe_offloaded_dom->ref);
+	fastlock_init(&zhpe_offloaded_cq->list_lock);
 
 	return 0;
 
 err4:
-	ofi_rbfree(&zhpe_cq->cqerr_rb);
+	ofi_rbfree(&zhpe_offloaded_cq->cqerr_rb);
 err3:
-	ofi_rbfree(&zhpe_cq->addr_rb);
+	ofi_rbfree(&zhpe_offloaded_cq->addr_rb);
 err2:
-	ofi_rbfdfree(&zhpe_cq->cq_rbfd);
+	ofi_rbfdfree(&zhpe_offloaded_cq->cq_rbfd);
 err1:
-	free(zhpe_cq);
+	free(zhpe_offloaded_cq);
 	return ret;
 }
 
-int zhpe_cq_report_error(struct zhpe_cq *cq, struct fi_cq_tagged_entry *tcqe,
+int zhpe_offloaded_cq_report_error(struct zhpe_offloaded_cq *cq, struct fi_cq_tagged_entry *tcqe,
 			 size_t olen, int err, int prov_errno, void *err_data,
 			 size_t err_data_size)
 {
@@ -730,7 +730,7 @@ int zhpe_cq_report_error(struct zhpe_cq *cq, struct fi_cq_tagged_entry *tcqe,
 	err_entry.err_data_size = err_data_size;
 
 	err_entry.op_context = tcqe->op_context;
-	err_entry.flags = zhpe_cq_sanitize_flags(tcqe->flags);
+	err_entry.flags = zhpe_offloaded_cq_sanitize_flags(tcqe->flags);
 	err_entry.len = tcqe->len;
 	err_entry.buf = tcqe->buf;
 	err_entry.data = tcqe->data;

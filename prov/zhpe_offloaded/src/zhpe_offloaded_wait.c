@@ -33,23 +33,23 @@
 
 #include <zhpe.h>
 
-#define ZHPE_LOG_DBG(...) _ZHPE_LOG_DBG(FI_LOG_CORE, __VA_ARGS__)
-#define ZHPE_LOG_ERROR(...) _ZHPE_LOG_ERROR(FI_LOG_CORE, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_CORE, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_CORE, __VA_ARGS__)
 
 enum {
 	WAIT_READ_FD = 0,
 	WAIT_WRITE_FD,
 };
 
-int zhpe_wait_get_obj(struct fid_wait *fid, void *arg)
+int zhpe_offloaded_wait_get_obj(struct fid_wait *fid, void *arg)
 {
 #ifndef _WIN32 /* there is no support of wait objects on windows */
 	struct fi_mutex_cond mut_cond;
 #endif /* _WIN32 */
-	struct zhpe_wait *wait;
+	struct zhpe_offloaded_wait *wait;
 
-	wait = container_of(fid, struct zhpe_wait, wait_fid);
-	if (zhpe_dom_check_manual_progress(wait->fab))
+	wait = container_of(fid, struct zhpe_offloaded_wait, wait_fid);
+	if (zhpe_offloaded_dom_check_manual_progress(wait->fab))
 		return -FI_ENOSYS;
 
 	switch (wait->type) {
@@ -65,14 +65,14 @@ int zhpe_wait_get_obj(struct fid_wait *fid, void *arg)
 		break;
 #endif /* _WIN32 */
 	default:
-		ZHPE_LOG_ERROR("Invalid wait obj type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid wait obj type\n");
 		return -FI_EINVAL;
 	}
 
 	return 0;
 }
 
-static int zhpe_wait_init(struct zhpe_wait *wait, enum fi_wait_obj type)
+static int zhpe_offloaded_wait_init(struct zhpe_offloaded_wait *wait, enum fi_wait_obj type)
 {
 	int ret;
 
@@ -97,45 +97,45 @@ static int zhpe_wait_init(struct zhpe_wait *wait, enum fi_wait_obj type)
 		break;
 
 	default:
-		ZHPE_LOG_ERROR("Invalid wait object type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid wait object type\n");
 		return -FI_EINVAL;
 	}
 	return 0;
 }
 
-static int zhpe_wait_wait(struct fid_wait *wait_fid, int timeout)
+static int zhpe_offloaded_wait_wait(struct fid_wait *wait_fid, int timeout)
 {
 	int err = 0, ret;
-	struct zhpe_cq *cq;
-	struct zhpe_cntr *cntr;
+	struct zhpe_offloaded_cq *cq;
+	struct zhpe_offloaded_cntr *cntr;
 	struct timeval now;
-	struct zhpe_wait *wait;
+	struct zhpe_offloaded_wait *wait;
 	double start_ms = 0.0, end_ms = 0.0;
-	struct zhpe_fid_list *list_item;
+	struct zhpe_offloaded_fid_list *list_item;
 	char c;
 
-	wait = container_of(wait_fid, struct zhpe_wait, wait_fid);
+	wait = container_of(wait_fid, struct zhpe_offloaded_wait, wait_fid);
 	if (timeout > 0) {
 		gettimeofday(&now, NULL);
 		start_ms = (double)now.tv_sec * 1000.0 +
 			(double)now.tv_usec / 1000.0;
 	}
 
-	dlist_foreach_container(&wait->fid_list, struct zhpe_fid_list,
+	dlist_foreach_container(&wait->fid_list, struct zhpe_offloaded_fid_list,
 				list_item, lentry) {
 		switch (list_item->fid->fclass) {
 		case FI_CLASS_CQ:
 			cq = container_of(list_item->fid,
-					  struct zhpe_cq, cq_fid.fid);
-			zhpe_cq_progress(cq);
+					  struct zhpe_offloaded_cq, cq_fid.fid);
+			zhpe_offloaded_cq_progress(cq);
 			if (ofi_rbused(&cq->cqerr_rb))
 				return 1;
 			break;
 
 		case FI_CLASS_CNTR:
 			cntr = container_of(list_item->fid,
-					    struct zhpe_cntr, cntr_fid.fid);
-			zhpe_cntr_progress(cntr);
+					    struct zhpe_offloaded_cntr, cntr_fid.fid);
+			zhpe_offloaded_cntr_progress(cntr);
 			break;
 		}
 	}
@@ -156,7 +156,7 @@ static int zhpe_wait_wait(struct fid_wait *wait_fid, int timeout)
 			while (err > 0) {
 				ret = ofi_read_socket(wait->wobj.fd[WAIT_READ_FD], &c, 1);
 				if (ret != 1) {
-					ZHPE_LOG_ERROR("failed to read wait_fd\n");
+					ZHPE_OFFLOADED_LOG_ERROR("failed to read wait_fd\n");
 					err = 0;
 					break;
 				} else
@@ -171,50 +171,50 @@ static int zhpe_wait_wait(struct fid_wait *wait_fid, int timeout)
 		break;
 
 	default:
-		ZHPE_LOG_ERROR("Invalid wait object type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid wait object type\n");
 		return -FI_EINVAL;
 	}
 	return err;
 }
 
-void zhpe_wait_signal(struct fid_wait *wait_fid)
+void zhpe_offloaded_wait_signal(struct fid_wait *wait_fid)
 {
-	struct zhpe_wait *wait;
+	struct zhpe_offloaded_wait *wait;
 	static char c = 'a';
 	int ret;
 
-	wait = container_of(wait_fid, struct zhpe_wait, wait_fid);
+	wait = container_of(wait_fid, struct zhpe_offloaded_wait, wait_fid);
 
 	switch (wait->type) {
 	case FI_WAIT_FD:
 		ret = ofi_write_socket(wait->wobj.fd[WAIT_WRITE_FD], &c, 1);
 		if (ret != 1)
-			ZHPE_LOG_ERROR("failed to signal\n");
+			ZHPE_OFFLOADED_LOG_ERROR("failed to signal\n");
 		break;
 
 	case FI_WAIT_MUTEX_COND:
 		cond_signal(&wait->wobj.mutex_cond.cond);
 		break;
 	default:
-		ZHPE_LOG_ERROR("Invalid wait object type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid wait object type\n");
 		return;
 	}
 }
 
-static struct fi_ops_wait zhpe_wait_ops = {
+static struct fi_ops_wait zhpe_offloaded_wait_ops = {
 	.size = sizeof(struct fi_ops_wait),
-	.wait = zhpe_wait_wait,
+	.wait = zhpe_offloaded_wait_wait,
 };
 
-static int zhpe_wait_control(struct fid *fid, int command, void *arg)
+static int zhpe_offloaded_wait_control(struct fid *fid, int command, void *arg)
 {
-	struct zhpe_wait *wait;
+	struct zhpe_offloaded_wait *wait;
 	int ret = 0;
 
-	wait = container_of(fid, struct zhpe_wait, wait_fid.fid);
+	wait = container_of(fid, struct zhpe_offloaded_wait, wait_fid.fid);
 	switch (command) {
 	case FI_GETWAIT:
-		ret = zhpe_wait_get_obj(&wait->wait_fid, arg);
+		ret = zhpe_offloaded_wait_get_obj(&wait->wait_fid, arg);
 		break;
 	default:
 		ret = -FI_EINVAL;
@@ -223,17 +223,17 @@ static int zhpe_wait_control(struct fid *fid, int command, void *arg)
 	return ret;
 }
 
-int zhpe_wait_close(fid_t fid)
+int zhpe_offloaded_wait_close(fid_t fid)
 {
-	struct zhpe_fid_list *list_item;
-	struct zhpe_wait *wait;
+	struct zhpe_offloaded_fid_list *list_item;
+	struct zhpe_offloaded_wait *wait;
 	struct dlist_entry	*dentry;
 	struct dlist_entry	*dnext;
 
-	wait = container_of(fid, struct zhpe_wait, wait_fid.fid);
+	wait = container_of(fid, struct zhpe_offloaded_wait, wait_fid.fid);
 
 	dlist_foreach_safe(&wait->fid_list, dentry, dnext) {
-		list_item = container_of(dentry, struct zhpe_fid_list, lentry);
+		list_item = container_of(dentry, struct zhpe_offloaded_fid_list, lentry);
 		dlist_remove(&list_item->lentry);
 		free(list_item);
 	}
@@ -248,15 +248,15 @@ int zhpe_wait_close(fid_t fid)
 	return 0;
 }
 
-static struct fi_ops zhpe_wait_fi_ops = {
+static struct fi_ops zhpe_offloaded_wait_fi_ops = {
 	.size = sizeof(struct fi_ops),
-	.close = zhpe_wait_close,
+	.close = zhpe_offloaded_wait_close,
 	.bind = fi_no_bind,
-	.control = zhpe_wait_control,
+	.control = zhpe_offloaded_wait_control,
 	.ops_open = fi_no_ops_open,
 };
 
-static int zhpe_verify_wait_attr(struct fi_wait_attr *attr)
+static int zhpe_offloaded_verify_wait_attr(struct fi_wait_attr *attr)
 {
 	switch (attr->wait_obj) {
 	case FI_WAIT_UNSPEC:
@@ -265,7 +265,7 @@ static int zhpe_verify_wait_attr(struct fi_wait_attr *attr)
 		break;
 
 	default:
-		ZHPE_LOG_ERROR("Invalid wait object type\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid wait object type\n");
 		return -FI_EINVAL;
 	}
 	if (attr->flags)
@@ -273,18 +273,18 @@ static int zhpe_verify_wait_attr(struct fi_wait_attr *attr)
 	return 0;
 }
 
-int zhpe_wait_open(struct fid_fabric *fabric, struct fi_wait_attr *attr,
+int zhpe_offloaded_wait_open(struct fid_fabric *fabric, struct fi_wait_attr *attr,
 		   struct fid_wait **waitset)
 {
 	int err;
-	struct zhpe_wait *wait;
-	struct zhpe_fabric *fab;
+	struct zhpe_offloaded_wait *wait;
+	struct zhpe_offloaded_fabric *fab;
 	enum fi_wait_obj wait_obj_type;
 
-	if (attr && zhpe_verify_wait_attr(attr))
+	if (attr && zhpe_offloaded_verify_wait_attr(attr))
 		return -FI_EINVAL;
 
-	fab = container_of(fabric, struct zhpe_fabric, fab_fid);
+	fab = container_of(fabric, struct zhpe_offloaded_fabric, fab_fid);
 	if (!attr || attr->wait_obj == FI_WAIT_UNSPEC)
 		wait_obj_type = FI_WAIT_FD;
 	else
@@ -294,7 +294,7 @@ int zhpe_wait_open(struct fid_fabric *fabric, struct fi_wait_attr *attr,
 	if (!wait)
 		return -FI_ENOMEM;
 
-	err = zhpe_wait_init(wait, wait_obj_type);
+	err = zhpe_offloaded_wait_init(wait, wait_obj_type);
 	if (err) {
 		free(wait);
 		return err;
@@ -302,8 +302,8 @@ int zhpe_wait_open(struct fid_fabric *fabric, struct fi_wait_attr *attr,
 
 	wait->wait_fid.fid.fclass = FI_CLASS_WAIT;
 	wait->wait_fid.fid.context = 0;
-	wait->wait_fid.fid.ops = &zhpe_wait_fi_ops;
-	wait->wait_fid.ops = &zhpe_wait_ops;
+	wait->wait_fid.fid.ops = &zhpe_offloaded_wait_fi_ops;
+	wait->wait_fid.ops = &zhpe_offloaded_wait_ops;
 	wait->fab = fab;
 	wait->type = wait_obj_type;
 	atm_inc(&fab->ref);

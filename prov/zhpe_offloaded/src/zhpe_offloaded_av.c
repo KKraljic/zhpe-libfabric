@@ -32,22 +32,22 @@
  * SOFTWARE.
  */
 
-#include <zhpe.h>
+#include <zhpe_offloaded.h>
 
-#define ZHPE_LOG_DBG(...) _ZHPE_LOG_DBG(FI_LOG_AV, __VA_ARGS__)
-#define ZHPE_LOG_ERROR(...) _ZHPE_LOG_ERROR(FI_LOG_AV, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_AV, __VA_ARGS__)
+#define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_AV, __VA_ARGS__)
 
-#define ZHPE_AV_TABLE_SZ(count, av_name)				\
-	(sizeof(struct zhpe_av_table_hdr) +				\
-	 (ZHPE_IS_SHARED_AV(av_name) * count * sizeof(uint64_t) +	\
-	  count * sizeof(struct zhpe_av_addr)))
-#define ZHPE_IS_SHARED_AV(av_name) ((av_name) ? 1 : 0)
+#define ZHPE_OFFLOADED_AV_TABLE_SZ(count, av_name)				\
+	(sizeof(struct zhpe_offloaded_av_table_hdr) +				\
+	 (ZHPE_OFFLOADED_IS_SHARED_AV(av_name) * count * sizeof(uint64_t) +	\
+	  count * sizeof(struct zhpe_offloaded_av_addr)))
+#define ZHPE_OFFLOADED_IS_SHARED_AV(av_name) ((av_name) ? 1 : 0)
 
-int zhpe_av_get_addr(struct zhpe_av *av, size_t av_index,
+int zhpe_offloaded_av_get_addr(struct zhpe_offloaded_av *av, size_t av_index,
 		     union sockaddr_in46 *sa)
 {
 	int			ret = -FI_ENOENT;
-	struct zhpe_av_addr	*av_addr;
+	struct zhpe_offloaded_av_addr	*av_addr;
 
 	fastlock_acquire(&av->list_lock);
 	if (av_index >= av->table_hdr->size)
@@ -64,12 +64,12 @@ int zhpe_av_get_addr(struct zhpe_av *av, size_t av_index,
 	return ret;
 }
 
-int zhpe_av_get_addr_index(struct zhpe_av *av, const void *addr,
+int zhpe_offloaded_av_get_addr_index(struct zhpe_offloaded_av *av, const void *addr,
 			   uint64_t *av_index)
 {
 	int			ret = -FI_ENOENT;
 	size_t			i;
-	struct zhpe_av_addr	*av_addr;
+	struct zhpe_offloaded_av_addr	*av_addr;
 
 	fastlock_acquire(&av->list_lock);
 	for (i = 0; i < av->table_hdr->size; i++) {
@@ -86,24 +86,24 @@ int zhpe_av_get_addr_index(struct zhpe_av *av, const void *addr,
 	return ret;
 }
 
-int zhpe_av_compare_addr(struct zhpe_av *av,
+int zhpe_offloaded_av_compare_addr(struct zhpe_offloaded_av *av,
 			 fi_addr_t addr1, fi_addr_t addr2)
 {
 	int			ret = 0;
 	uint64_t		index1;
 	uint64_t		index2;
-	struct zhpe_av_addr	*av_addr1;
-	struct zhpe_av_addr	*av_addr2;
+	struct zhpe_offloaded_av_addr	*av_addr1;
+	struct zhpe_offloaded_av_addr	*av_addr2;
 
 	index1 = ((uint64_t)addr1 & av->mask);
 	index2 = ((uint64_t)addr2 & av->mask);
 
 	if (index1 >= av->table_hdr->size) {
-		ZHPE_LOG_DBG("0x%Lx not in table\n", (ullong)addr1);
+		ZHPE_OFFLOADED_LOG_DBG("0x%Lx not in table\n", (ullong)addr1);
 		ret = -1;
 	}
 	if (index2 >= av->table_hdr->size) {
-		ZHPE_LOG_DBG("0x%Lx not in table\n", (ullong)addr2);
+		ZHPE_OFFLOADED_LOG_DBG("0x%Lx not in table\n", (ullong)addr2);
 		ret = -1;
 	}
 	if (ret)
@@ -113,11 +113,11 @@ int zhpe_av_compare_addr(struct zhpe_av *av,
 	av_addr2 = &av->table[index2];
 
 	if (!av_addr1->addr.sa_family) {
-		ZHPE_LOG_DBG("0x%Lx not valid\n", (ullong)addr1);
+		ZHPE_OFFLOADED_LOG_DBG("0x%Lx not valid\n", (ullong)addr1);
 		ret = -1;
 	}
 	if (!av_addr2->addr.sa_family) {
-		ZHPE_LOG_DBG("0x%Lx not valid\n", (ullong)addr2);
+		ZHPE_OFFLOADED_LOG_DBG("0x%Lx not valid\n", (ullong)addr2);
 		ret = -1;
 	}
 	if (ret)
@@ -126,7 +126,7 @@ int zhpe_av_compare_addr(struct zhpe_av *av,
 	return sockaddr_cmp(&av_addr1->addr, &av_addr2->addr);
 }
 
-static inline void zhpe_av_report_success(struct zhpe_av *av, void *context,
+static inline void zhpe_offloaded_av_report_success(struct zhpe_offloaded_av *av, void *context,
 					  int num_done, uint64_t flags)
 {
 	struct fi_eq_entry eq_entry;
@@ -137,39 +137,39 @@ static inline void zhpe_av_report_success(struct zhpe_av *av, void *context,
 	eq_entry.fid = &av->av_fid.fid;
 	eq_entry.context = context;
 	eq_entry.data = num_done;
-	zhpe_eq_report_event(av->eq, FI_AV_COMPLETE,
+	zhpe_offloaded_eq_report_event(av->eq, FI_AV_COMPLETE,
 			     &eq_entry, sizeof(eq_entry), flags);
 }
 
-static inline void zhpe_av_report_error(struct zhpe_av *av,
+static inline void zhpe_offloaded_av_report_error(struct zhpe_offloaded_av *av,
 					void *context, int index, int err)
 {
 	if (!av->eq)
 		return;
 
-	zhpe_eq_report_error(av->eq, &av->av_fid.fid,
+	zhpe_offloaded_eq_report_error(av->eq, &av->av_fid.fid,
 			     context, index, err, -err, NULL, 0);
 }
 
-static void zhpe_update_av_table(struct zhpe_av *_av, size_t count)
+static void zhpe_offloaded_update_av_table(struct zhpe_offloaded_av *_av, size_t count)
 {
-	_av->table = (struct zhpe_av_addr *)
+	_av->table = (struct zhpe_offloaded_av_addr *)
 		((char *)_av->table_hdr +
-		ZHPE_IS_SHARED_AV(_av->attr.name) * count * sizeof(uint64_t) +
-		sizeof(struct zhpe_av_table_hdr));
+		ZHPE_OFFLOADED_IS_SHARED_AV(_av->attr.name) * count * sizeof(uint64_t) +
+		sizeof(struct zhpe_offloaded_av_table_hdr));
 }
 
-static int zhpe_resize_av_table(struct zhpe_av *av)
+static int zhpe_offloaded_resize_av_table(struct zhpe_offloaded_av *av)
 {
 	void *new_addr;
 	size_t new_count, table_sz, old_sz;
 
 	new_count = av->table_hdr->size * 2;
-	table_sz = ZHPE_AV_TABLE_SZ(new_count, av->attr.name);
-	old_sz = ZHPE_AV_TABLE_SZ(av->table_hdr->size, av->attr.name);
+	table_sz = ZHPE_OFFLOADED_AV_TABLE_SZ(new_count, av->attr.name);
+	old_sz = ZHPE_OFFLOADED_AV_TABLE_SZ(av->table_hdr->size, av->attr.name);
 
 	if (av->attr.name) {
-		new_addr = zhpe_mremap(av->table_hdr, old_sz, table_sz);
+		new_addr = zhpe_offloaded_mremap(av->table_hdr, old_sz, table_sz);
 		if (new_addr == MAP_FAILED)
 			return -1;
 
@@ -182,12 +182,12 @@ static int zhpe_resize_av_table(struct zhpe_av *av)
 
 	av->table_hdr = new_addr;
 	av->table_hdr->size = new_count;
-	zhpe_update_av_table(av, new_count);
+	zhpe_offloaded_update_av_table(av, new_count);
 
 	return 0;
 }
 
-static int zhpe_av_get_next_index(struct zhpe_av *av)
+static int zhpe_offloaded_av_get_next_index(struct zhpe_offloaded_av *av)
 {
 	uint64_t i;
 
@@ -199,7 +199,7 @@ static int zhpe_av_get_next_index(struct zhpe_av *av)
 	return -1;
 }
 
-static int zhpe_check_table_in(struct zhpe_av *_av, const void *vaddr,
+static int zhpe_offloaded_check_table_in(struct zhpe_offloaded_av *_av, const void *vaddr,
 			       fi_addr_t *fi_addr, int count, uint64_t flags,
 			       void *context)
 {
@@ -207,7 +207,7 @@ static int zhpe_check_table_in(struct zhpe_av *_av, const void *vaddr,
 	int			i;
 	uint64_t		j;
 	char			sa_ip[INET6_ADDRSTRLEN];
-	struct zhpe_av_addr	*av_addr;
+	struct zhpe_offloaded_av_addr	*av_addr;
 	int			index;
 	const char		*caddr;
 	size_t			caddr_len;
@@ -221,14 +221,14 @@ static int zhpe_check_table_in(struct zhpe_av *_av, const void *vaddr,
 			if (!caddr_len) {
 				if (fi_addr)
 					fi_addr[i] = FI_ADDR_NOTAVAIL;
-				zhpe_av_report_error(_av, context, i,
+				zhpe_offloaded_av_report_error(_av, context, i,
 						     FI_EINVAL);
 				continue;
 			}
 			for (j = 0; j < _av->table_hdr->size; j++) {
 				av_addr = &_av->table[j];
 				if (!sockaddr_cmp(&av_addr->addr, caddr)) {
-					ZHPE_LOG_DBG("Found addr in shared"
+					ZHPE_OFFLOADED_LOG_DBG("Found addr in shared"
 						     " av\n");
 					if (fi_addr)
 						fi_addr[i] = (fi_addr_t)j;
@@ -236,7 +236,7 @@ static int zhpe_check_table_in(struct zhpe_av *_av, const void *vaddr,
 				}
 			}
 		}
-		zhpe_av_report_success(_av, context, ret, flags);
+		zhpe_offloaded_av_report_success(_av, context, ret, flags);
 
 		return (_av->attr.flags & FI_EVENT) ? 0 : ret;
 	}
@@ -246,16 +246,16 @@ static int zhpe_check_table_in(struct zhpe_av *_av, const void *vaddr,
 		if (!caddr_len) {
 			if (fi_addr)
 				fi_addr[i] = FI_ADDR_NOTAVAIL;
-			zhpe_av_report_error(_av, context, i, FI_EINVAL);
+			zhpe_offloaded_av_report_error(_av, context, i, FI_EINVAL);
 			continue;
 		}
 		if (_av->table_hdr->stored == _av->table_hdr->size) {
-			index = zhpe_av_get_next_index(_av);
+			index = zhpe_offloaded_av_get_next_index(_av);
 			if (index < 0) {
-				if (zhpe_resize_av_table(_av)) {
+				if (zhpe_offloaded_resize_av_table(_av)) {
 					if (fi_addr)
 						fi_addr[i] = FI_ADDR_NOTAVAIL;
-					zhpe_av_report_error(_av, context, i,
+					zhpe_offloaded_av_report_error(_av, context, i,
 							     FI_ENOMEM);
 					continue;
 				}
@@ -267,7 +267,7 @@ static int zhpe_check_table_in(struct zhpe_av *_av, const void *vaddr,
 
 		av_addr = &_av->table[index];
 		sockaddr_ntop(caddr, sa_ip, sizeof(sa_ip));
-		ZHPE_LOG_DBG("AV-INSERT: dst_addr family: %d, IP %s,"
+		ZHPE_OFFLOADED_LOG_DBG("AV-INSERT: dst_addr family: %d, IP %s,"
 			     " port: %u\n", sockaddr_family(caddr), sa_ip,
 			     sockaddr_porth(caddr));
 
@@ -277,32 +277,32 @@ static int zhpe_check_table_in(struct zhpe_av *_av, const void *vaddr,
 
 		ret++;
 	}
-	zhpe_av_report_success(_av, context, ret, flags);
+	zhpe_offloaded_av_report_success(_av, context, ret, flags);
 
 	return (_av->attr.flags & FI_EVENT) ? 0 : ret;
 }
 
-static int zhpe_av_insert(struct fid_av *av, const void *addr, size_t count,
+static int zhpe_offloaded_av_insert(struct fid_av *av, const void *addr, size_t count,
 			  fi_addr_t *fi_addr, uint64_t flags, void *context)
 {
-	struct zhpe_av *_av;
-	_av = container_of(av, struct zhpe_av, av_fid);
+	struct zhpe_offloaded_av *_av;
+	_av = container_of(av, struct zhpe_offloaded_av, av_fid);
 
-	return zhpe_check_table_in(_av, addr,
+	return zhpe_offloaded_check_table_in(_av, addr,
 				   fi_addr, count, flags, context);
 }
 
-static int zhpe_av_lookup(struct fid_av *av, fi_addr_t fi_addr, void *addr,
+static int zhpe_offloaded_av_lookup(struct fid_av *av, fi_addr_t fi_addr, void *addr,
 			  size_t *addrlen)
 {
 	int index;
-	struct zhpe_av *_av;
-	struct zhpe_av_addr *av_addr;
+	struct zhpe_offloaded_av *_av;
+	struct zhpe_offloaded_av_addr *av_addr;
 
-	_av = container_of(av, struct zhpe_av, av_fid);
+	_av = container_of(av, struct zhpe_offloaded_av, av_fid);
 	index = ((uint64_t)fi_addr & _av->mask);
 	if (index >= (int)_av->table_hdr->size || index < 0) {
-		ZHPE_LOG_ERROR("requested address not inserted\n");
+		ZHPE_OFFLOADED_LOG_ERROR("requested address not inserted\n");
 		return -EINVAL;
 	}
 
@@ -312,47 +312,47 @@ static int zhpe_av_lookup(struct fid_av *av, fi_addr_t fi_addr, void *addr,
 	return 0;
 }
 
-static int _zhpe_av_insertsvc(struct fid_av *av, const char *node,
+static int _zhpe_offloaded_av_insertsvc(struct fid_av *av, const char *node,
 			      const char *service, fi_addr_t *fi_addr,
 			      uint64_t flags, void *context)
 {
 	int			ret;
 	struct addrinfo		hints;
 	struct addrinfo		*result = NULL;
-	struct zhpe_av		*_av;
+	struct zhpe_offloaded_av		*_av;
 
-	_av = container_of(av, struct zhpe_av, av_fid);
+	_av = container_of(av, struct zhpe_offloaded_av, av_fid);
 
-	zhpe_getaddrinfo_hints_init(&hints, zhpe_sa_family(&_av->domain->info));
-	ret = zhpe_getaddrinfo(node, service, &hints, &result);
+	zhpe_offloaded_getaddrinfo_hints_init(&hints, zhpe_offloaded_sa_family(&_av->domain->info));
+	ret = zhpe_offloaded_getaddrinfo(node, service, &hints, &result);
 	if (ret < 0) {
 		if (_av->eq) {
-			zhpe_av_report_error(_av, context, 0, FI_EINVAL);
-			zhpe_av_report_success(_av, context, 0, flags);
+			zhpe_offloaded_av_report_error(_av, context, 0, FI_EINVAL);
+			zhpe_offloaded_av_report_success(_av, context, 0, flags);
 		}
 		return ret;
 	}
 
-	ret = zhpe_check_table_in(_av, result->ai_addr,
+	ret = zhpe_offloaded_check_table_in(_av, result->ai_addr,
 				  fi_addr, 1, flags, context);
 
 	freeaddrinfo(result);
 	return ret;
 }
 
-static int zhpe_av_insertsvc(struct fid_av *av, const char *node,
+static int zhpe_offloaded_av_insertsvc(struct fid_av *av, const char *node,
 			     const char *service, fi_addr_t *fi_addr,
 			     uint64_t flags, void *context)
 {
 	if (!service) {
-		ZHPE_LOG_ERROR("Port not provided\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Port not provided\n");
 		return -FI_EINVAL;
 	}
 
-	return _zhpe_av_insertsvc(av, node, service, fi_addr, flags, context);
+	return _zhpe_offloaded_av_insertsvc(av, node, service, fi_addr, flags, context);
 }
 
-static int zhpe_av_insertsym(struct fid_av *av, const char *node,
+static int zhpe_offloaded_av_insertsym(struct fid_av *av, const char *node,
 			     size_t nodecnt,  const char *service,
 			     size_t svccnt, fi_addr_t *fi_addr,
 			     uint64_t flags, void *context)
@@ -366,7 +366,7 @@ static int zhpe_av_insertsym(struct fid_av *av, const char *node,
 	size_t i, j;
 
 	if (!node || !service || node[0] == '\0') {
-		ZHPE_LOG_ERROR("Node/service not provided\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Node/service not provided\n");
 		return -FI_EINVAL;
 	}
 
@@ -391,13 +391,13 @@ static int zhpe_av_insertsym(struct fid_av *av, const char *node,
 			len2 = snprintf(tmp_port, FI_NAME_MAX,  "%d",
 					var_port + (int)j);
 			if (len1 > 0 && len1 < FI_NAME_MAX && len2 > 0 && len2 < FI_NAME_MAX) {
-				ret = _zhpe_av_insertsvc(av, tmp_host, tmp_port, fi_addr, flags, context);
+				ret = _zhpe_offloaded_av_insertsvc(av, tmp_host, tmp_port, fi_addr, flags, context);
 				if (ret == 1)
 					success++;
 				else
 					err_code = ret;
 			} else {
-				ZHPE_LOG_ERROR("Node/service value is not valid\n");
+				ZHPE_OFFLOADED_LOG_ERROR("Node/service value is not valid\n");
 				err_code = FI_ETOOSMALL;
 			}
 		}
@@ -406,28 +406,28 @@ static int zhpe_av_insertsym(struct fid_av *av, const char *node,
 }
 
 
-static int zhpe_av_remove(struct fid_av *av, fi_addr_t *fi_addr, size_t count,
+static int zhpe_offloaded_av_remove(struct fid_av *av, fi_addr_t *fi_addr, size_t count,
 			  uint64_t flags)
 {
 	size_t i;
-	struct zhpe_av *_av;
-	struct zhpe_av_addr *av_addr;
+	struct zhpe_offloaded_av *_av;
+	struct zhpe_offloaded_av_addr *av_addr;
 	struct dlist_entry *item;
 	struct fid_list_entry *fid_entry;
-	struct zhpe_ep *zhpe_ep;
-	struct zhpe_conn *conn;
+	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
+	struct zhpe_offloaded_conn *conn;
 	uint16_t idx;
 
-	_av = container_of(av, struct zhpe_av, av_fid);
+	_av = container_of(av, struct zhpe_offloaded_av, av_fid);
 	fastlock_acquire(&_av->list_lock);
 	dlist_foreach(&_av->ep_list, item) {
 		fid_entry = container_of(item, struct fid_list_entry, entry);
-		zhpe_ep = container_of(fid_entry->fid, struct zhpe_ep, ep.fid);
+		zhpe_offloaded_ep = container_of(fid_entry->fid, struct zhpe_offloaded_ep, ep.fid);
 		for (i = 0; i < count; i++) {
-			idx = fi_addr[i] & zhpe_ep->attr->av->mask;
-			conn = ofi_idm_lookup(&zhpe_ep->attr->av_idm, idx);
+			idx = fi_addr[i] & zhpe_offloaded_ep->attr->av->mask;
+			conn = ofi_idm_lookup(&zhpe_offloaded_ep->attr->av_idm, idx);
 			if (conn) {
-				ofi_idm_clear(&zhpe_ep->attr->av_idm, idx);
+				ofi_idm_clear(&zhpe_offloaded_ep->attr->av_idm, idx);
 				conn->fi_addr = FI_ADDR_NOTAVAIL;
 			}
 		}
@@ -441,7 +441,7 @@ static int zhpe_av_remove(struct fid_av *av, fi_addr_t *fi_addr, size_t count,
 	return 0;
 }
 
-static const char *zhpe_av_straddr(struct fid_av *av, const void *addr,
+static const char *zhpe_offloaded_av_straddr(struct fid_av *av, const void *addr,
 				   char *buf, size_t *len)
 {
 	int			size = -1;
@@ -459,25 +459,25 @@ static const char *zhpe_av_straddr(struct fid_av *av, const void *addr,
 	return buf;
 }
 
-static int zhpe_av_bind(struct fid *fid, struct fid *bfid, uint64_t flags)
+static int zhpe_offloaded_av_bind(struct fid *fid, struct fid *bfid, uint64_t flags)
 {
-	struct zhpe_av *av;
-	struct zhpe_eq *eq;
+	struct zhpe_offloaded_av *av;
+	struct zhpe_offloaded_eq *eq;
 
 	if (bfid->fclass != FI_CLASS_EQ)
 		return -FI_EINVAL;
 
-	av = container_of(fid, struct zhpe_av, av_fid.fid);
-	eq = container_of(bfid, struct zhpe_eq, eq.fid);
+	av = container_of(fid, struct zhpe_offloaded_av, av_fid.fid);
+	eq = container_of(bfid, struct zhpe_offloaded_eq, eq.fid);
 	av->eq = eq;
 	return 0;
 }
 
-static int zhpe_av_close(struct fid *fid)
+static int zhpe_offloaded_av_close(struct fid *fid)
 {
-	struct zhpe_av *av;
+	struct zhpe_offloaded_av *av;
 	int ret = 0;
-	av = container_of(fid, struct zhpe_av, av_fid.fid);
+	av = container_of(fid, struct zhpe_offloaded_av, av_fid.fid);
 	if (atm_load_rlx(&av->ref))
 		return -FI_EBUSY;
 
@@ -486,7 +486,7 @@ static int zhpe_av_close(struct fid *fid)
 	else {
 		ret = ofi_shm_unmap(&av->shm);
 		if (ret)
-			ZHPE_LOG_ERROR("unmap failed: %s\n", strerror(errno));
+			ZHPE_OFFLOADED_LOG_ERROR("unmap failed: %s\n", strerror(errno));
 	}
 
 	atm_dec(&av->domain->ref);
@@ -495,35 +495,35 @@ static int zhpe_av_close(struct fid *fid)
 	return 0;
 }
 
-static struct fi_ops zhpe_av_fi_ops = {
+static struct fi_ops zhpe_offloaded_av_fi_ops = {
 	.size = sizeof(struct fi_ops),
-	.close = zhpe_av_close,
-	.bind = zhpe_av_bind,
+	.close = zhpe_offloaded_av_close,
+	.bind = zhpe_offloaded_av_bind,
 	.control = fi_no_control,
 	.ops_open = fi_no_ops_open,
 };
 
-static struct fi_ops_av zhpe_am_ops = {
+static struct fi_ops_av zhpe_offloaded_am_ops = {
 	.size = sizeof(struct fi_ops_av),
-	.insert = zhpe_av_insert,
-	.insertsvc = zhpe_av_insertsvc,
-	.insertsym = zhpe_av_insertsym,
-	.remove = zhpe_av_remove,
-	.lookup = zhpe_av_lookup,
-	.straddr = zhpe_av_straddr
+	.insert = zhpe_offloaded_av_insert,
+	.insertsvc = zhpe_offloaded_av_insertsvc,
+	.insertsym = zhpe_offloaded_av_insertsym,
+	.remove = zhpe_offloaded_av_remove,
+	.lookup = zhpe_offloaded_av_lookup,
+	.straddr = zhpe_offloaded_av_straddr
 };
 
-static struct fi_ops_av zhpe_at_ops = {
+static struct fi_ops_av zhpe_offloaded_at_ops = {
 	.size = sizeof(struct fi_ops_av),
-	.insert = zhpe_av_insert,
-	.insertsvc = zhpe_av_insertsvc,
-	.insertsym = zhpe_av_insertsym,
-	.remove = zhpe_av_remove,
-	.lookup = zhpe_av_lookup,
-	.straddr = zhpe_av_straddr
+	.insert = zhpe_offloaded_av_insert,
+	.insertsvc = zhpe_offloaded_av_insertsvc,
+	.insertsym = zhpe_offloaded_av_insertsym,
+	.remove = zhpe_offloaded_av_remove,
+	.lookup = zhpe_offloaded_av_lookup,
+	.straddr = zhpe_offloaded_av_straddr
 };
 
-static int zhpe_verify_av_attr(struct fi_av_attr *attr)
+static int zhpe_offloaded_verify_av_attr(struct fi_av_attr *attr)
 {
 	switch (attr->type) {
 	case FI_AV_MAP:
@@ -537,28 +537,28 @@ static int zhpe_verify_av_attr(struct fi_av_attr *attr)
 	if (attr->flags & FI_READ && !attr->name)
 		return -FI_EINVAL;
 
-	if (attr->rx_ctx_bits > ZHPE_EP_MAX_CTX_BITS) {
-		ZHPE_LOG_ERROR("Invalid rx_ctx_bits\n");
+	if (attr->rx_ctx_bits > ZHPE_OFFLOADED_EP_MAX_CTX_BITS) {
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid rx_ctx_bits\n");
 		return -FI_EINVAL;
 	}
 	return 0;
 }
 
-int zhpe_av_open(struct fid_domain *domain, struct fi_av_attr *attr,
+int zhpe_offloaded_av_open(struct fid_domain *domain, struct fi_av_attr *attr,
 		 struct fid_av **av, void *context)
 {
 	int ret = 0;
-	struct zhpe_domain *dom;
-	struct zhpe_av *_av;
+	struct zhpe_offloaded_domain *dom;
+	struct zhpe_offloaded_av *_av;
 	size_t table_sz;
 
-	if (!attr || zhpe_verify_av_attr(attr))
+	if (!attr || zhpe_offloaded_verify_av_attr(attr))
 		return -FI_EINVAL;
 
 	if (attr->type == FI_AV_UNSPEC)
 		attr->type = FI_AV_TABLE;
 
-	dom = container_of(domain, struct zhpe_domain, dom_fid);
+	dom = container_of(domain, struct zhpe_offloaded_domain, dom_fid);
 	if (dom->attr.av_type != FI_AV_UNSPEC &&
 	    dom->attr.av_type != attr->type)
 		return -FI_EINVAL;
@@ -568,15 +568,15 @@ int zhpe_av_open(struct fid_domain *domain, struct fi_av_attr *attr,
 		return -FI_ENOMEM;
 
 	_av->attr = *attr;
-	_av->attr.count = (attr->count) ? attr->count : zhpe_av_def_sz;
-	table_sz = ZHPE_AV_TABLE_SZ(_av->attr.count, attr->name);
+	_av->attr.count = (attr->count) ? attr->count : zhpe_offloaded_av_def_sz;
+	table_sz = ZHPE_OFFLOADED_AV_TABLE_SZ(_av->attr.count, attr->name);
 
 	if (attr->name) {
 		ret = ofi_shm_map(&_av->shm, attr->name, table_sz,
 				attr->flags & FI_READ, (void**)&_av->table_hdr);
 
 		if (ret || _av->table_hdr == MAP_FAILED) {
-			ZHPE_LOG_ERROR("map failed\n");
+			ZHPE_OFFLOADED_LOG_ERROR("map failed\n");
 			ret = -FI_EINVAL;
 			goto err;
 		}
@@ -584,7 +584,7 @@ int zhpe_av_open(struct fid_domain *domain, struct fi_av_attr *attr,
 		_av->idx_arr = (uint64_t *)(_av->table_hdr + 1);
 		_av->attr.map_addr = _av->idx_arr;
 		attr->map_addr = _av->attr.map_addr;
-		ZHPE_LOG_DBG("Updating map_addr: %p\n", _av->attr.map_addr);
+		ZHPE_OFFLOADED_LOG_DBG("Updating map_addr: %p\n", _av->attr.map_addr);
 
 		if (attr->flags & FI_READ) {
 			if (_av->table_hdr->size != _av->attr.count) {
@@ -604,18 +604,18 @@ int zhpe_av_open(struct fid_domain *domain, struct fi_av_attr *attr,
 		}
 		_av->table_hdr->size = _av->attr.count;
 	}
-	zhpe_update_av_table(_av, _av->attr.count);
+	zhpe_offloaded_update_av_table(_av, _av->attr.count);
 
 	_av->av_fid.fid.fclass = FI_CLASS_AV;
 	_av->av_fid.fid.context = context;
-	_av->av_fid.fid.ops = &zhpe_av_fi_ops;
+	_av->av_fid.fid.ops = &zhpe_offloaded_av_fi_ops;
 
 	switch (attr->type) {
 	case FI_AV_MAP:
-		_av->av_fid.ops = &zhpe_am_ops;
+		_av->av_fid.ops = &zhpe_offloaded_am_ops;
 		break;
 	case FI_AV_TABLE:
-		_av->av_fid.ops = &zhpe_at_ops;
+		_av->av_fid.ops = &zhpe_offloaded_at_ops;
 		break;
 	default:
 		ret = -FI_EINVAL;
@@ -635,7 +635,7 @@ int zhpe_av_open(struct fid_domain *domain, struct fi_av_attr *attr,
 		break;
 
 	default:
-		ZHPE_LOG_ERROR("Invalid address format\n");
+		ZHPE_OFFLOADED_LOG_ERROR("Invalid address format\n");
 		ret = -FI_EINVAL;
 		goto err2;
 	}
