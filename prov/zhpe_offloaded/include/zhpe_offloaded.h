@@ -96,7 +96,7 @@
 #include <zhpeq_util.h>
 #include "fi_ext_zhpe_offloaded.h"
 
-#include <zhpe_stats.h>
+#include <zhpe_offloaded_stats.h>
 
 /* Type checking container_of */
 #ifdef container_of
