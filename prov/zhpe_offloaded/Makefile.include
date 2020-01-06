@@ -30,7 +30,7 @@ _zhpe_offloaded_headers = \
 	prov/zhpe_offloaded/include/zhpe_offloaded.h
 
 if HAVE_ZHPE_OFFLOADED_DL
-pkglib_LTLIBRARIES += libzhpe-fi.la
+pkglib_LTLIBRARIES += libzhpe_offloaded-fi.la
 libzhpe_offloaded_fi_la_SOURCES = $(_zhpe_offloaded_files) $(_zhpe_offloaded_headers) $(common_srcs)
 libzhpe_offloaded_fi_la_CPPFLAGS = $(AM_CPPFLAGS) $(zhpe_offloaded_CPPFLAGS) -g
 libzhpe_offloaded_fi_la_LDFLAGS = \
