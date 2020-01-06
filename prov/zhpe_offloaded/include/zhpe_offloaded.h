@@ -98,6 +98,10 @@
 
 #include <zhpe_offloaded_stats.h>
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
 /* Type checking container_of */
 #ifdef container_of
 #undef container_of
