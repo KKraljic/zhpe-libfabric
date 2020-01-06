@@ -207,15 +207,15 @@ SHM_INI ;
 #  define SHM_INIT NULL
 #endif
 
-#if (HAVE_ZHPE) && (HAVE_ZHPE_DL)
-#  define ZHPE_INI FI_EXT_INI
-#  define ZHPE_INIT NULL
-#elif (HAVE_ZHPE)
-#  define ZHPE_INI INI_SIG(fi_zhpe_ini)
-#  define ZHPE_INIT fi_zhpe_ini()
-ZHPE_INI ;
+#if (HAVE_ZHPE_OFFLOADED) && (HAVE_ZHPE_OFFLOADED_DL)
+#  define ZHPE_OFFLOADED_INI FI_EXT_INI
+#  define ZHPE_OFFLOADED_INIT NULL
+#elif (HAVE_ZHPE_OFFLOADED)
+#  define ZHPE_OFFLOADED_INI INI_SIG(fi_zhpe_offloaded_ini)
+#  define ZHPE_OFFLOADED_INIT fi_zhpe_offloaded_ini()
+ZHPE_OFFLOADED_INI ;
 #else
-#  define ZHPE_INIT NULL
+#  define ZHPE_OFFLOADED_INIT NULL
 #endif
 
 #endif /* _OFI_PROV_H_ */
