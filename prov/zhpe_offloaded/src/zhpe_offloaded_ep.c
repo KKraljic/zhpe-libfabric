@@ -32,7 +32,7 @@
  * SOFTWARE.
  */
 
-#include <zhpe.h>
+#include <zhpe_offloaded.h>
 
 #define ZHPE_OFFLOADED_LOG_DBG(...) _ZHPE_OFFLOADED_LOG_DBG(FI_LOG_EP_CTRL, __VA_ARGS__)
 #define ZHPE_OFFLOADED_LOG_ERROR(...) _ZHPE_OFFLOADED_LOG_ERROR(FI_LOG_EP_CTRL, __VA_ARGS__)

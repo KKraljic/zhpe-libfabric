@@ -31,7 +31,7 @@
  * SOFTWARE.
  */
 
-#include <zhpe.h>
+#include <zhpe_offloaded.h>
 
 #if HAVE_GETIFADDRS
 #include <net/if.h>

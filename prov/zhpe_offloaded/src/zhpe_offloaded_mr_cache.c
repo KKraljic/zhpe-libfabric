@@ -31,7 +31,7 @@
  * SOFTWARE.
  */
 
-#include <zhpe.h>
+#include <zhpe_offloaded.h>
 
 #ifdef HAVE_LINUX_UMMUNOTIFY_H
 
