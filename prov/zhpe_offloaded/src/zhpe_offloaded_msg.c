@@ -41,6 +41,7 @@ int zhpe_offloaded_check_user_iov(const struct iovec *uiov, void **udesc,
 			struct zhpe_offloaded_iov_state *lstate, size_t liov_max,
 			size_t *total_len)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_iov		*liov = lstate->viov;
 	struct zhpe_offloaded_mr		*zmr;
@@ -78,6 +79,7 @@ int zhpe_offloaded_check_user_iov(const struct iovec *uiov, void **udesc,
 static inline ssize_t do_recvmsg(struct fid_ep *ep, const void *vmsg,
 				 uint64_t flags, bool tagged, bool lock)
 {
+    PRINT_DEBUG_LIBFAB;
 	ssize_t			ret = -FI_EINVAL;
 	struct zhpe_offloaded_rx_entry	*rx_entry = NULL;
 	struct zhpe_offloaded_ep		*zhpe_offloaded_ep;
@@ -252,6 +254,7 @@ static inline ssize_t do_recvmsg(struct fid_ep *ep, const void *vmsg,
 ssize_t zhpe_offloaded_do_recvmsg(struct fid_ep *ep, const void *vmsg,
 			uint64_t flags, bool tagged)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep		*zhpe_offloaded_ep = container_of(ep, struct zhpe_offloaded_ep, ep);
 
 	/* Used by trigger: flags are assumed to be correct. */
@@ -262,6 +265,7 @@ ssize_t zhpe_offloaded_do_recvmsg(struct fid_ep *ep, const void *vmsg,
 static ssize_t do_sendmsg(struct fid_ep *ep, const void *vmsg, uint64_t flags,
 			  bool tagged, bool lock)
 {
+    PRINT_DEBUG_LIBFAB;
 	ssize_t			ret = -FI_EINVAL;
 	int64_t			tindex = -1;
 	struct zhpe_offloaded_msg_hdr	hdr = { .op_type = ZHPE_OFFLOADED_OP_SEND };
@@ -479,6 +483,7 @@ static ssize_t do_sendmsg(struct fid_ep *ep, const void *vmsg, uint64_t flags,
 ssize_t zhpe_offloaded_do_sendmsg(struct fid_ep *ep, const void *vmsg,
 			uint64_t flags, bool tagged)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep		*zhpe_offloaded_ep = container_of(ep, struct zhpe_offloaded_ep, ep);
 	/* Used by trigger: flags are assumed to be correct. */
 	return do_sendmsg(ep, vmsg, flags, tagged,
@@ -491,6 +496,7 @@ static ssize_t zhpe_offloaded_ep_recvmsg##_name(struct fid_ep *ep,		\
 				      const struct fi_msg *msg,		\
 				      uint64_t flags)			\
 {									\
+    PRINT_DEBUG_LIBFAB;             \
 	if (flags & ZHPE_OFFLOADED_BAD_FLAGS_MASK)				\
 		return -EINVAL;						\
 									\
@@ -501,6 +507,7 @@ static ssize_t zhpe_offloaded_ep_recv##_name(struct fid_ep *ep, void *buf,	\
 				   size_t len, void *desc,		\
 				   fi_addr_t src_addr, void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB; \
 	struct fi_msg msg;						\
 	struct iovec msg_iov;						\
 									\
@@ -522,6 +529,7 @@ static ssize_t zhpe_offloaded_ep_recvv##_name(struct fid_ep *ep,			\
 				    void **desc, size_t count,		\
 				    fi_addr_t src_addr,	void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg msg;						\
 									\
 	memset(&msg, 0, sizeof(msg));					\
@@ -540,6 +548,7 @@ static ssize_t zhpe_offloaded_ep_sendmsg##_name(struct fid_ep *ep,		\
 				      const struct fi_msg *msg,		\
 				      uint64_t flags)			\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	if (flags & ZHPE_OFFLOADED_BAD_FLAGS_MASK)				\
 		return -EINVAL;						\
 	return do_sendmsg(ep, msg, flags, false, _lock);		\
@@ -549,6 +558,7 @@ static ssize_t zhpe_offloaded_ep_send##_name(struct fid_ep *ep, const void *buf,
 				   size_t len,void *desc,		\
 				   fi_addr_t dest_addr, void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg msg;						\
 	struct iovec msg_iov;						\
 									\
@@ -570,6 +580,7 @@ static ssize_t zhpe_offloaded_ep_sendv##_name(struct fid_ep *ep,			\
 				    void **desc, size_t count,		\
 				    fi_addr_t dest_addr, void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg msg;						\
 									\
 	memset(&msg, 0, sizeof(msg));					\
@@ -589,6 +600,7 @@ static ssize_t zhpe_offloaded_ep_senddata##_name(struct fid_ep *ep,		\
 				       fi_addr_t dest_addr,		\
 				       void *context)			\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg msg;						\
 	struct iovec msg_iov;						\
 									\
@@ -611,6 +623,7 @@ static ssize_t zhpe_offloaded_ep_inject##_name(struct fid_ep *ep,			\
 				     const void *buf, size_t len,	\
 				     fi_addr_t dest_addr)		\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg msg;						\
 	struct iovec msg_iov;						\
 									\
@@ -632,6 +645,7 @@ static ssize_t zhpe_offloaded_ep_injectdata##_name(struct fid_ep *ep,		\
 					 uint64_t data,			\
 					 fi_addr_t dest_addr)		\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg msg;						\
 	struct iovec msg_iov;						\
 									\
@@ -672,6 +686,7 @@ static ssize_t zhpe_offloaded_ep_trecvmsg##_name(struct fid_ep *ep,		\
 				       const struct fi_msg_tagged *msg,	\
 				       uint64_t flags)			\
 {									\
+    PRINT_DEBUG_LIBFAB; \
 	if (flags & ZHPE_OFFLOADED_PROV_FLAGS)					\
 		return -FI_EINVAL;					\
 									\
@@ -683,6 +698,7 @@ static ssize_t zhpe_offloaded_ep_trecv##_name(struct fid_ep *ep, void *buf,	\
 				    fi_addr_t src_addr, uint64_t tag,	\
 				    uint64_t ignore, void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg_tagged msg;					\
 	struct iovec msg_iov;						\
 									\
@@ -707,6 +723,7 @@ static ssize_t zhpe_offloaded_ep_trecvv##_name(struct fid_ep *ep,			\
 				     fi_addr_t src_addr, uint64_t tag,	\
 				     uint64_t ignore, void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg_tagged msg;					\
 									\
 	memset(&msg, 0, sizeof(msg));					\
@@ -726,6 +743,7 @@ static ssize_t zhpe_offloaded_ep_tsendmsg##_name(struct fid_ep *ep,		\
 				       const struct fi_msg_tagged *msg,	\
 				       uint64_t flags)			\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	if (flags & ZHPE_OFFLOADED_BAD_FLAGS_MASK)				\
 		return -EINVAL;						\
 									\
@@ -737,6 +755,7 @@ static ssize_t zhpe_offloaded_ep_tsend##_name(struct fid_ep *ep,			\
 				    void *desc, fi_addr_t dest_addr,	\
 				    uint64_t tag, void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg_tagged msg;					\
 	struct iovec msg_iov;						\
 									\
@@ -760,6 +779,7 @@ static ssize_t zhpe_offloaded_ep_tsendv##_name(struct fid_ep *ep,			\
 				     fi_addr_t dest_addr, uint64_t tag,	\
 				     void *context)			\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg_tagged msg;					\
 									\
 	memset(&msg, 0, sizeof(msg));					\
@@ -780,6 +800,7 @@ static ssize_t zhpe_offloaded_ep_tsenddata##_name(struct fid_ep *ep,		\
 					fi_addr_t dest_addr,		\
 					uint64_t tag, void *context)	\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg_tagged msg;					\
 	struct iovec msg_iov;						\
 									\
@@ -805,6 +826,7 @@ static ssize_t zhpe_offloaded_ep_tinject##_name(struct fid_ep *ep,		\
 				      fi_addr_t dest_addr,		\
 				      uint64_t tag)			\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg_tagged msg;					\
 	struct iovec msg_iov;						\
 									\
@@ -828,6 +850,7 @@ static ssize_t zhpe_offloaded_ep_tinjectdata##_name(struct fid_ep *ep,		\
 					  fi_addr_t dest_addr,		\
 					  uint64_t tag)			\
 {									\
+    PRINT_DEBUG_LIBFAB;     \
 	struct fi_msg_tagged msg;					\
 	struct iovec msg_iov;						\
 									\

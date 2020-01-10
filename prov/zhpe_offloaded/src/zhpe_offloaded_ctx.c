@@ -39,6 +39,7 @@
 struct zhpe_offloaded_rx_ctx *zhpe_offloaded_rx_ctx_alloc(const struct fi_rx_attr *attr,
 				      void *context, struct zhpe_offloaded_domain *domain)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			rc;
 	struct zhpe_offloaded_rx_ctx	*rx_ctx;
 
@@ -98,6 +99,7 @@ struct zhpe_offloaded_rx_ctx *zhpe_offloaded_rx_ctx_alloc(const struct fi_rx_att
 
 void zhpe_offloaded_rx_ctx_free(struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rx_entry	*rx_entry;
 	struct zhpeu_atm_list_next *next;
 
@@ -144,6 +146,7 @@ void zhpe_offloaded_rx_ctx_free(struct zhpe_offloaded_rx_ctx *rx_ctx)
 static struct zhpe_offloaded_tx_ctx *zhpe_offloaded_tx_context_alloc(const struct fi_tx_attr *attr,
 						 void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_tx_ctx	*tx_ctx;
 
 	tx_ctx = calloc_cachealigned(1, sizeof(*tx_ctx));
@@ -165,11 +168,13 @@ static struct zhpe_offloaded_tx_ctx *zhpe_offloaded_tx_context_alloc(const struc
 struct zhpe_offloaded_tx_ctx *zhpe_offloaded_tx_ctx_alloc(const struct fi_tx_attr *attr,
 				      void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	return zhpe_offloaded_tx_context_alloc(attr, context);
 }
 
 void zhpe_offloaded_tx_ctx_free(struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	mutex_destroy(&tx_ctx->mutex);
 	free(tx_ctx);
 }

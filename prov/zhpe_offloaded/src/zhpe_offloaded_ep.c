@@ -39,6 +39,7 @@
 
 static void zhpe_offloaded_tx_ctx_close(struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (tx_ctx->comp.send_cq)
 		zhpe_offloaded_cq_remove_tx_ctx(tx_ctx->comp.send_cq, tx_ctx);
 
@@ -54,6 +55,7 @@ static void zhpe_offloaded_tx_ctx_close(struct zhpe_offloaded_tx_ctx *tx_ctx)
 
 static void zhpe_offloaded_rx_ctx_close(struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (rx_ctx->comp.recv_cq)
 		zhpe_offloaded_cq_remove_rx_ctx(rx_ctx->comp.recv_cq, rx_ctx);
 
@@ -69,6 +71,7 @@ static void zhpe_offloaded_rx_ctx_close(struct zhpe_offloaded_rx_ctx *rx_ctx)
 
 static int zhpe_offloaded_ctx_close(struct fid *fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
 
@@ -101,6 +104,7 @@ static int zhpe_offloaded_ctx_close(struct fid *fid)
 
 static int zhpe_offloaded_ctx_bind_cq(struct fid *fid, struct fid *bfid, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
@@ -146,6 +150,7 @@ static int zhpe_offloaded_ctx_bind_cq(struct fid *fid, struct fid *bfid, uint64_
 static int zhpe_offloaded_ctx_bind_cntr(struct fid *fid, struct fid *bfid,
 			      uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cntr *cntr;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
@@ -204,6 +209,7 @@ static int zhpe_offloaded_ctx_bind_cntr(struct fid *fid, struct fid *bfid,
 
 static int zhpe_offloaded_ctx_bind(struct fid *fid, struct fid *bfid, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	switch (bfid->fclass) {
 	case FI_CLASS_CQ:
 		return zhpe_offloaded_ctx_bind_cq(fid, bfid, flags);
@@ -223,6 +229,7 @@ static int zhpe_offloaded_ctx_bind(struct fid *fid, struct fid *bfid, uint64_t f
 
 static int zhpe_offloaded_ctx_enable(struct fid_ep *ep)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
 
@@ -260,6 +267,7 @@ static int zhpe_offloaded_ctx_enable(struct fid_ep *ep)
 int zhpe_offloaded_getopflags(struct fi_tx_attr *tx_attr, struct fi_rx_attr *rx_attr,
 			uint64_t *flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	if ((*flags & FI_TRANSMIT) && (*flags & FI_RECV)) {
 		ZHPE_OFFLOADED_LOG_ERROR("Both Tx/Rx flags cannot be specified\n");
 		return -FI_EINVAL;
@@ -277,6 +285,7 @@ int zhpe_offloaded_getopflags(struct fi_tx_attr *tx_attr, struct fi_rx_attr *rx_
 int zhpe_offloaded_setopflags(struct fi_tx_attr *tx_attr, struct fi_rx_attr *rx_attr,
 			uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	if ((flags & FI_TRANSMIT) && (flags & FI_RECV)) {
 		ZHPE_OFFLOADED_LOG_ERROR("Both Tx/Rx flags cannot be specified\n");
 		return -FI_EINVAL;
@@ -297,6 +306,7 @@ int zhpe_offloaded_setopflags(struct fi_tx_attr *tx_attr, struct fi_rx_attr *rx_
 
 static int zhpe_offloaded_ctx_control(struct fid *fid, int command, void *arg)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fid_ep *ep;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
@@ -376,6 +386,7 @@ static struct fi_ops zhpe_offloaded_ctx_ops = {
 static int zhpe_offloaded_ctx_getopt(struct fid *fid, int level, int optname,
 			   void *optval, size_t *optlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
 
 	rx_ctx = container_of(fid, struct zhpe_offloaded_rx_ctx, ctx.fid);
@@ -404,6 +415,7 @@ static int zhpe_offloaded_ctx_getopt(struct fid *fid, int level, int optname,
 static int zhpe_offloaded_ctx_setopt(fid_t fid, int level, int optname,
 		       const void *optval, size_t optlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
 	rx_ctx = container_of(fid, struct zhpe_offloaded_rx_ctx, ctx.fid);
 
@@ -423,6 +435,7 @@ static int zhpe_offloaded_ctx_setopt(fid_t fid, int level, int optname,
 
 static ssize_t zhpe_offloaded_rx_ctx_cancel(struct zhpe_offloaded_rx_ctx *rx_ctx, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	ssize_t			ret = -FI_ENOENT;
 	struct zhpe_offloaded_rx_entry	*rx_entry;
 	struct dlist_entry	*dentry;
@@ -450,6 +463,7 @@ static ssize_t zhpe_offloaded_rx_ctx_cancel(struct zhpe_offloaded_rx_ctx *rx_ctx
 
 static ssize_t zhpe_offloaded_ep_cancel(struct fid *fid, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rx_ctx *rx_ctx = NULL;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 
@@ -476,6 +490,7 @@ static ssize_t zhpe_offloaded_ep_cancel(struct fid *fid, void *context)
 
 static ssize_t zhpe_offloaded_rx_size_left(struct fid_ep *ep)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
 
@@ -500,6 +515,7 @@ static ssize_t zhpe_offloaded_rx_size_left(struct fid_ep *ep)
 
 static ssize_t zhpe_offloaded_tx_size_left(struct fid_ep *ep)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 
@@ -535,6 +551,7 @@ struct fi_ops_ep zhpe_offloaded_ctx_ep_ops = {
 
 static int zhpe_offloaded_eq_fid_match(struct dlist_entry *entry, const void *arg)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_eq_entry *zhpe_offloaded_eq_entry;
 	struct fi_eq_entry *eq_entry;
 	fid_t fid = (fid_t)arg;
@@ -549,6 +566,7 @@ static int zhpe_offloaded_eq_fid_match(struct dlist_entry *entry, const void *ar
 static void zhpe_offloaded_ep_clear_eq_list(struct dlistfd_head *list,
 				  struct fid_ep *ep_fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct dlist_entry *entry;
 
 	while (!dlistfd_empty(list)) {
@@ -563,6 +581,7 @@ static void zhpe_offloaded_ep_clear_eq_list(struct dlistfd_head *list,
 
 static int zhpe_offloaded_ep_close(struct fid *fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	char c = 0;
 
@@ -666,6 +685,7 @@ static int zhpe_offloaded_ep_close(struct fid *fid)
 
 static int zhpe_offloaded_ep_bind(struct fid *fid, struct fid *bfid, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	size_t i;
 	struct zhpe_offloaded_ep *ep;
@@ -803,6 +823,7 @@ static int zhpe_offloaded_ep_bind(struct fid *fid, struct fid *bfid, uint64_t fl
 
 static int zhpe_offloaded_ep_control(struct fid *fid, int command, void *arg)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct fid_ep *ep_fid;
 	struct fi_alias *alias;
@@ -882,6 +903,7 @@ struct fi_ops zhpe_offloaded_ep_fi_ops = {
 
 int zhpe_offloaded_ep_enable(struct fid_ep *ep)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t i;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
@@ -914,6 +936,7 @@ int zhpe_offloaded_ep_enable(struct fid_ep *ep)
 
 int zhpe_offloaded_ep_disable(struct fid_ep *ep)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t i;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 
@@ -935,6 +958,7 @@ int zhpe_offloaded_ep_disable(struct fid_ep *ep)
 static int zhpe_offloaded_ep_getopt(fid_t fid, int level, int optname,
 		       void *optval, size_t *optlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	zhpe_offloaded_ep = container_of(fid, struct zhpe_offloaded_ep, ep.fid);
 
@@ -965,6 +989,7 @@ static int zhpe_offloaded_ep_getopt(fid_t fid, int level, int optname,
 static int zhpe_offloaded_ep_setopt(fid_t fid, int level, int optname,
 		       const void *optval, size_t optlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t i;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	zhpe_offloaded_ep = container_of(fid, struct zhpe_offloaded_ep, ep.fid);
@@ -994,6 +1019,7 @@ static int zhpe_offloaded_ep_tx_ctx(struct fid_ep *ep, int index,
 			  struct fi_tx_attr *attr,
 			  struct fid_ep **tx_ep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 
@@ -1042,6 +1068,7 @@ static int zhpe_offloaded_ep_rx_ctx(struct fid_ep *ep, int index,
 			  struct fi_rx_attr *attr,
 			  struct fid_ep **rx_ep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
 
@@ -1100,6 +1127,7 @@ static void zhpe_offloaded_set_fabric_attr(void *src_addr,
 				 const struct fi_fabric_attr *hint_attr,
 				 struct fi_fabric_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_fabric *fabric;
 
 	*attr = zhpe_offloaded_fabric_attr;
@@ -1118,6 +1146,7 @@ static void zhpe_offloaded_set_domain_attr(uint32_t api_version, void *src_addr,
 				 const struct fi_domain_attr *hint_attr,
 				 struct fi_info *info)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_domain_attr	*attr = info->domain_attr;
 	struct zhpe_offloaded_domain *domain;
 
@@ -1317,6 +1346,7 @@ err:
 int zhpe_offloaded_alloc_endpoint(struct fid_domain *domain, struct fi_info *info,
 		  struct zhpe_offloaded_ep **ep, void *context, size_t fclass)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_ep *zhpe_offloaded_ep;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
@@ -1495,6 +1525,7 @@ err1:
 static int zhpe_offloaded_ep_lookup_conn(struct zhpe_offloaded_ep_attr *ep_attr, fi_addr_t fi_addr,
 			       struct zhpe_offloaded_conn **pconn)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	bool			first = true;
 	size_t			av_index = ((ep_attr->ep_type == FI_EP_MSG) ?
@@ -1573,6 +1604,7 @@ static int zhpe_offloaded_ep_lookup_conn(struct zhpe_offloaded_ep_attr *ep_attr,
 int zhpe_offloaded_ep_get_conn(struct zhpe_offloaded_ep_attr *attr,
 		     fi_addr_t fi_addr, struct zhpe_offloaded_conn **pconn)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 
 	for (;;) {

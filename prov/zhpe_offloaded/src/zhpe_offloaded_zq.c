@@ -46,6 +46,7 @@ struct mem_wire_msg2 {
 
 void zhpe_offloaded_tx_free(struct zhpe_offloaded_tx *ztx)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_pe_retry	*pe_retry;
 	struct zhpeu_atm_snatch_head atm_list;
 	struct zhpeu_atm_list_next *atm_cur;
@@ -80,6 +81,7 @@ void zhpe_offloaded_tx_free(struct zhpe_offloaded_tx *ztx)
 
 static int do_tx_setup(struct zhpe_offloaded_ep_attr *ep_attr, struct zhpe_offloaded_tx **ztx_out)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = -FI_ENOMEM;
 	struct zhpe_offloaded_tx		*ztx = NULL;
 	uint32_t		qlen;
@@ -171,6 +173,7 @@ static int do_tx_setup(struct zhpe_offloaded_ep_attr *ep_attr, struct zhpe_offlo
 
 static inline void *scoreboard_alloc(struct zhpe_offloaded_rx_common *rx_cmn)
 {
+    PRINT_DEBUG_LIBFAB;
 	const size_t		size = sizeof(*rx_cmn->scoreboard);
 	const uint32_t		bits = size * CHAR_BIT;
 
@@ -182,6 +185,7 @@ static inline void *scoreboard_alloc(struct zhpe_offloaded_rx_common *rx_cmn)
 static void zhpe_offloaded_tx_handle_conn_pull(struct zhpe_offloaded_pe_root *pe_root,
 				     struct zhpeq_cq_entry *zq_cqe)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_conn	*conn = pe_root->conn;
 	struct zhpe_offloaded_rx_peer_visible *peer = (void *)&zq_cqe->z.result;
 
@@ -195,6 +199,7 @@ static void zhpe_offloaded_tx_handle_conn_pull(struct zhpe_offloaded_pe_root *pe
 
 static void do_rx_free(struct zhpe_offloaded_conn *conn)
 {
+    PRINT_DEBUG_LIBFAB;
 	zhpe_offloaded_rkey_put(conn->rx_remote.cmn.rkey);
 	conn->rx_remote.cmn.rkey = NULL;
 	zhpe_offloaded_mr_put(conn->rx_local.cmn.zmr);
@@ -209,6 +214,7 @@ static void do_rx_free(struct zhpe_offloaded_conn *conn)
 
 static int do_rx_setup(struct zhpe_offloaded_conn *conn, int conn_fd)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpe_offloaded_ep_attr	*ep_attr = conn->ep_attr;
 	struct zhpe_offloaded_ep		*ep = conn->ep_attr->ep;
@@ -325,6 +331,7 @@ static int do_rx_setup(struct zhpe_offloaded_conn *conn, int conn_fd)
 
 int zhpe_offloaded_compare_zkeys(void *vk1, void *vk2)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_key		*k1 = (void *)vk1;
 	struct zhpe_offloaded_key		*k2 = (void *)vk2;
 
@@ -338,6 +345,7 @@ int zhpe_offloaded_compare_zkeys(void *vk1, void *vk2)
 
 int zhpe_offloaded_conn_z_setup(struct zhpe_offloaded_conn *conn, int conn_fd)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_ep_attr	*ep_attr = conn->ep_attr;
 	union sockaddr_in46	sa;
@@ -398,6 +406,7 @@ int zhpe_offloaded_conn_z_setup(struct zhpe_offloaded_conn *conn, int conn_fd)
 }
 int zhpe_offloaded_conn_fam_setup(struct zhpe_offloaded_conn *conn)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_ep_attr	*ep_attr = conn->ep_attr;
 	struct zhpe_offloaded_rkey_data	*new;
@@ -463,6 +472,7 @@ int zhpe_offloaded_conn_fam_setup(struct zhpe_offloaded_conn *conn)
 
 void zhpe_offloaded_rkey_free(struct zhpe_offloaded_rkey_data *rkey)
 {
+    PRINT_DEBUG_LIBFAB;
 	zhpeq_zmmu_free(zhpeq_dom(rkey->ztx->zq), rkey->kdata);
 	zhpe_offloaded_tx_put(rkey->ztx);
 	free(rkey);
@@ -470,6 +480,7 @@ void zhpe_offloaded_rkey_free(struct zhpe_offloaded_rkey_data *rkey)
 
 void zhpe_offloaded_conn_z_free(struct zhpe_offloaded_conn *conn)
 {
+    PRINT_DEBUG_LIBFAB;
 	RbtIterator		*rbt;
 	struct zhpe_offloaded_rkey_data	*rkey;
 	struct zhpe_offloaded_kexp_data	*kexp;
@@ -509,6 +520,7 @@ void zhpe_offloaded_conn_z_free(struct zhpe_offloaded_conn *conn)
 
 int __zhpe_offloaded_conn_pull(struct zhpe_offloaded_conn *conn)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_rx_remote	*rx_ringr = &conn->rx_remote;
 	uint32_t		zindex;
@@ -535,6 +547,7 @@ int __zhpe_offloaded_conn_pull(struct zhpe_offloaded_conn *conn)
 int zhpe_offloaded_tx_free_res(struct zhpe_offloaded_conn *conn, int64_t tindex,
 		     int64_t zindex, int64_t rindex, uint8_t pe_flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_tx		*ztx = conn->ztx;
 
@@ -585,26 +598,31 @@ commit:
 
 static inline void *ptr_to_chunk(void *ptr)
 {
+    PRINT_DEBUG_LIBFAB;
 	return ((char *)ptr - CHUNK_DATA_OFF);
 }
 
 static inline size_t chunk_size(size_t csize)
 {
+    PRINT_DEBUG_LIBFAB;
 	return (csize & CHUNK_SIZE_MASK) + CHUNK_SIZE_SIZE;
 }
 
 static inline void *_next_chunk(struct zhpe_offloaded_slab_free_entry *chunk)
 {
+    PRINT_DEBUG_LIBFAB;
 	return ((char *)chunk + chunk_size(chunk->size));
 }
 
 static inline void *_prev_chunk(struct zhpe_offloaded_slab_free_entry *chunk)
 {
+    PRINT_DEBUG_LIBFAB;
 	return ((char *)chunk - chunk_size(chunk->prev_size));
 }
 
 static inline void *prev_chunk(struct zhpe_offloaded_slab_free_entry *chunk)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (chunk->size & CHUNK_SIZE_PINUSE)
 		return NULL;
 	return _prev_chunk(chunk);
@@ -744,6 +762,7 @@ static void slab_check_freed(struct zhpe_offloaded_slab *slab,
 int zhpe_offloaded_slab_init(struct zhpe_offloaded_slab *slab, size_t size,
 		   struct zhpe_offloaded_domain *domain)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = -FI_ENOMEM;
 	struct zhpe_offloaded_slab_free_entry *chunk;
 	struct fid_mr		*mr;
@@ -780,6 +799,7 @@ int zhpe_offloaded_slab_init(struct zhpe_offloaded_slab *slab, size_t size,
 
 void zhpe_offloaded_slab_destroy(struct zhpe_offloaded_slab *slab)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (slab->mem) {
 		slab_check(slab);
 		zhpe_offloaded_mr_put(slab->zmr);
@@ -791,6 +811,7 @@ void zhpe_offloaded_slab_destroy(struct zhpe_offloaded_slab *slab)
 
 int zhpe_offloaded_slab_alloc(struct zhpe_offloaded_slab *slab, size_t size,  struct zhpe_offloaded_iov *iov)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = -ENOMEM;
 	struct zhpe_offloaded_slab_free_entry *chunk;
 	struct zhpe_offloaded_slab_free_entry *next;
@@ -842,6 +863,7 @@ int zhpe_offloaded_slab_alloc(struct zhpe_offloaded_slab *slab, size_t size,  st
 
 void zhpe_offloaded_slab_free(struct zhpe_offloaded_slab *slab, void *ptr)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_slab_free_entry *chunk;
 	struct zhpe_offloaded_slab_free_entry *next;
 	struct zhpe_offloaded_slab_free_entry *nextnext;
@@ -891,6 +913,7 @@ int zhpe_offloaded_iov_op_get(struct zhpeq *zq, uint32_t zindex, bool fence,
 		    void *lptr, uint64_t lza, size_t len, uint64_t rza,
 		    void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	return zhpeq_get(zq, zindex, fence, lza, len, rza, context);
 }
 
@@ -898,6 +921,7 @@ int zhpe_offloaded_iov_op_get_imm(struct zhpeq *zq, uint32_t zindex, bool fence,
 			  void *lptr, uint64_t lza, size_t len, uint64_t rza,
 			  void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (len > ZHPEQ_IMM_MAX)
 		abort();
 
@@ -908,6 +932,7 @@ int zhpe_offloaded_iov_op_put(struct zhpeq *zq, uint32_t zindex, bool fence,
 		    void *lptr, uint64_t lza, size_t len, uint64_t rza,
 		    void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 
 	if (len <= ZHPEQ_IMM_MAX)
@@ -927,6 +952,7 @@ int zhpe_offloaded_iov_op(struct zhpe_offloaded_pe_root *pe_root,
 			  uint64_t rza, void *context),
 		size_t *rem)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpeq		*zq = pe_root->conn->ztx->zq;
 	struct zhpe_offloaded_iov_state	save_lstate = *lstate;
@@ -1021,6 +1047,7 @@ int zhpe_offloaded_put_imm_to_iov(struct zhpe_offloaded_pe_root *pe_root, void *
 			size_t llen, struct zhpe_offloaded_iov_state *rstate,
 			size_t *rem)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_iov		liov = {
 		.iov_base = lbuf,
 		.iov_len = llen,
@@ -1039,6 +1066,7 @@ int zhpe_offloaded_iov_to_get_imm(struct zhpe_offloaded_pe_root *pe_root,
 			size_t llen, struct zhpe_offloaded_iov_state *rstate,
 			size_t *rem)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_iov		liov = {
 		.iov_len = llen,
 	};
@@ -1054,6 +1082,7 @@ int zhpe_offloaded_iov_to_get_imm(struct zhpe_offloaded_pe_root *pe_root,
 void zhpe_offloaded_send_status_rem(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
 			  int32_t status, uint64_t rem)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_msg_status	msg_status;
 
 	msg_status.rem = htobe64(rem);
@@ -1068,6 +1097,7 @@ void zhpe_offloaded_send_status_rem(struct zhpe_offloaded_conn *conn, struct zhp
 void zhpe_offloaded_send_status(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
 		      int32_t status)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_msg_status	msg_status;
 
 	msg_status.status = htonl(status);
@@ -1081,6 +1111,7 @@ void zhpe_offloaded_send_status(struct zhpe_offloaded_conn *conn, struct zhpe_of
 void zhpe_offloaded_send_key_revoke(struct zhpe_offloaded_conn *conn,
 			  const struct zhpe_offloaded_key *zkey)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_msg_hdr	ohdr = {
 		.op_type	= ZHPE_OFFLOADED_OP_KEY_REVOKE,
 	};
@@ -1097,6 +1128,7 @@ void zhpe_offloaded_send_key_revoke(struct zhpe_offloaded_conn *conn,
 static inline struct zhpe_offloaded_rkey_data *conn_rkey_get(struct zhpe_offloaded_conn *conn,
 						   const struct zhpe_offloaded_key *zkey)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rkey_data	*ret;
 	RbtIterator		*rbt;
 
@@ -1112,6 +1144,7 @@ static inline struct zhpe_offloaded_rkey_data *conn_rkey_get(struct zhpe_offload
 struct zhpe_offloaded_rkey_data *zhpe_offloaded_conn_rkey_get(struct zhpe_offloaded_conn *conn,
 					  const struct zhpe_offloaded_key *zkey)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rkey_data	*ret;
 
 	ret = conn_rkey_get(conn, zkey);
@@ -1122,6 +1155,7 @@ struct zhpe_offloaded_rkey_data *zhpe_offloaded_conn_rkey_get(struct zhpe_offloa
 int zhpe_offloaded_conn_key_export(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
 			 struct zhpe_offloaded_mr *zmr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_domain	*domain = conn->ep_attr->domain;
 	struct zhpe_offloaded_kexp_data	*new = NULL;
@@ -1202,6 +1236,7 @@ int zhpe_offloaded_conn_key_export(struct zhpe_offloaded_conn *conn, struct zhpe
 static void process_rkey_revoke(struct zhpe_offloaded_conn *conn,
 				const struct zhpe_offloaded_key *zkey)
 {
+    PRINT_DEBUG_LIBFAB;
 	RbtIterator		*rbt;
 
 	rbt = zhpe_offloaded_zkey_rbtFind(conn->rkey_tree, zkey);
@@ -1214,6 +1249,7 @@ static void process_rkey_revoke(struct zhpe_offloaded_conn *conn,
 static void process_rkey_import(struct zhpe_offloaded_conn *conn,
 				struct zhpe_offloaded_rkey_data *new)
 {
+    PRINT_DEBUG_LIBFAB;
 	RbtIterator		*rbt;
 
 	rbt = zhpe_offloaded_zkey_rbtFind(conn->rkey_tree, &new->zkey);
@@ -1228,6 +1264,7 @@ static void process_rkey_import(struct zhpe_offloaded_conn *conn,
 
 static void process_rkey_deferred(struct zhpe_offloaded_conn *conn)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rkey_data	*new;
 	struct dlist_entry      *dlist;
 
@@ -1256,6 +1293,7 @@ static void process_rkey_deferred(struct zhpe_offloaded_conn *conn)
 static void insert_rkey_deferred(struct zhpe_offloaded_conn *conn,
 				 struct zhpe_offloaded_rkey_data *new)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct dlist_entry      *dlist;
 	struct zhpe_offloaded_rkey_data	*cur;
 
@@ -1273,6 +1311,7 @@ int zhpe_offloaded_conn_rkey_import(struct zhpe_offloaded_conn *conn, struct zhp
 			   uint64_t key, const void *blob, size_t blob_len,
 			   struct zhpe_offloaded_rkey_data **rkey_out)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_rkey_data	*new = NULL;
 	struct zhpeq_key_data	*kdata = NULL;
@@ -1317,6 +1356,7 @@ int zhpe_offloaded_conn_rkey_import(struct zhpe_offloaded_conn *conn, struct zhp
 int zhpe_offloaded_conn_rkey_revoke(struct zhpe_offloaded_conn *conn, struct zhpe_offloaded_msg_hdr ohdr,
 			  const struct zhpe_offloaded_key *zkey)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_rkey_data	*new = NULL;
 
@@ -1344,6 +1384,7 @@ int zhpe_offloaded_conn_rkey_revoke(struct zhpe_offloaded_conn *conn, struct zhp
 
 static int check_read(size_t req, ssize_t res)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 
 	if (res == -1) {
@@ -1363,6 +1404,7 @@ static int check_read(size_t req, ssize_t res)
 
 static int check_write(size_t req, ssize_t res)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 
 	if (res == -1) {
@@ -1382,6 +1424,7 @@ static int check_write(size_t req, ssize_t res)
 
 int zhpe_offloaded_send_blob(int sock_fd, const void *blob, size_t blob_len)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = -FI_EINVAL;
 	uint32_t		wlen = blob_len;
 	size_t			req;
@@ -1410,6 +1453,7 @@ int zhpe_offloaded_send_blob(int sock_fd, const void *blob, size_t blob_len)
 
 int zhpe_offloaded_recv_fixed_blob(int sock_fd, void *blob, size_t blob_len)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	uint32_t		wlen;
 	size_t			req;

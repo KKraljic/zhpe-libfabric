@@ -67,6 +67,7 @@ static int read_default_params;
 
 void zhpe_offloaded_dom_add_to_list(struct zhpe_offloaded_domain *domain)
 {
+    PRINT_DEBUG_LIBFAB;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	dlist_insert_tail(&domain->dom_lentry, &zhpe_offloaded_dom_list);
 	fastlock_release(&zhpe_offloaded_list_lock);
@@ -74,6 +75,7 @@ void zhpe_offloaded_dom_add_to_list(struct zhpe_offloaded_domain *domain)
 
 static inline int zhpe_offloaded_dom_check_list_internal(struct zhpe_offloaded_domain *domain)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain	*dom_entry;
 
 	dlist_foreach_container(&zhpe_offloaded_dom_list, struct zhpe_offloaded_domain, dom_entry,
@@ -86,6 +88,7 @@ static inline int zhpe_offloaded_dom_check_list_internal(struct zhpe_offloaded_d
 
 int zhpe_offloaded_dom_check_list(struct zhpe_offloaded_domain *domain)
 {
+    PRINT_DEBUG_LIBFAB;
 	int found;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	found = zhpe_offloaded_dom_check_list_internal(domain);
@@ -95,6 +98,7 @@ int zhpe_offloaded_dom_check_list(struct zhpe_offloaded_domain *domain)
 
 void zhpe_offloaded_dom_remove_from_list(struct zhpe_offloaded_domain *domain)
 {
+    PRINT_DEBUG_LIBFAB;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	if (zhpe_offloaded_dom_check_list_internal(domain))
 		dlist_remove(&domain->dom_lentry);
@@ -104,6 +108,7 @@ void zhpe_offloaded_dom_remove_from_list(struct zhpe_offloaded_domain *domain)
 
 struct zhpe_offloaded_domain *zhpe_offloaded_dom_list_head(void)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain *domain;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	if (dlist_empty(&zhpe_offloaded_dom_list)) {
@@ -118,6 +123,7 @@ struct zhpe_offloaded_domain *zhpe_offloaded_dom_list_head(void)
 
 int zhpe_offloaded_dom_check_manual_progress(struct zhpe_offloaded_fabric *fabric)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain	*dom_entry;
 
 	dlist_foreach_container(&zhpe_offloaded_dom_list, struct zhpe_offloaded_domain, dom_entry,
@@ -131,6 +137,7 @@ int zhpe_offloaded_dom_check_manual_progress(struct zhpe_offloaded_fabric *fabri
 
 void zhpe_offloaded_fab_add_to_list(struct zhpe_offloaded_fabric *fabric)
 {
+    PRINT_DEBUG_LIBFAB;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	dlist_insert_tail(&fabric->fab_lentry, &zhpe_offloaded_fab_list);
 	fastlock_release(&zhpe_offloaded_list_lock);
@@ -138,6 +145,7 @@ void zhpe_offloaded_fab_add_to_list(struct zhpe_offloaded_fabric *fabric)
 
 static inline int zhpe_offloaded_fab_check_list_internal(struct zhpe_offloaded_fabric *fabric)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_fabric	*fab_entry;
 
 	dlist_foreach_container(&zhpe_offloaded_fab_list, struct zhpe_offloaded_fabric, fab_entry,
@@ -150,6 +158,7 @@ static inline int zhpe_offloaded_fab_check_list_internal(struct zhpe_offloaded_f
 
 int zhpe_offloaded_fab_check_list(struct zhpe_offloaded_fabric *fabric)
 {
+    PRINT_DEBUG_LIBFAB;
 	int found;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	found = zhpe_offloaded_fab_check_list_internal(fabric);
@@ -159,6 +168,7 @@ int zhpe_offloaded_fab_check_list(struct zhpe_offloaded_fabric *fabric)
 
 void zhpe_offloaded_fab_remove_from_list(struct zhpe_offloaded_fabric *fabric)
 {
+    PRINT_DEBUG_LIBFAB;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	if (zhpe_offloaded_fab_check_list_internal(fabric))
 		dlist_remove(&fabric->fab_lentry);
@@ -168,6 +178,7 @@ void zhpe_offloaded_fab_remove_from_list(struct zhpe_offloaded_fabric *fabric)
 
 struct zhpe_offloaded_fabric *zhpe_offloaded_fab_list_head(void)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_fabric *fabric;
 	fastlock_acquire(&zhpe_offloaded_list_lock);
 	if (dlist_empty(&zhpe_offloaded_fab_list))
@@ -181,6 +192,7 @@ struct zhpe_offloaded_fabric *zhpe_offloaded_fab_list_head(void)
 
 int zhpe_offloaded_verify_fabric_attr(struct fi_fabric_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (!attr)
 		return 0;
 
@@ -196,6 +208,7 @@ int zhpe_offloaded_verify_fabric_attr(struct fi_fabric_attr *attr)
 int zhpe_offloaded_verify_info(uint32_t api_version, const struct fi_info *hints,
 		     uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	uint64_t		caps;
 	enum fi_ep_type		ep_type;
@@ -297,6 +310,7 @@ int zhpe_offloaded_verify_info(uint32_t api_version, const struct fi_info *hints
 
 static int zhpe_offloaded_trywait(struct fid_fabric *fabric, struct fid **fids, int count)
 {
+    PRINT_DEBUG_LIBFAB;
 	/* we're always ready to wait! */
 	return 0;
 }
@@ -312,6 +326,7 @@ static struct fi_ops_fabric zhpe_offloaded_fab_ops = {
 
 static int zhpe_offloaded_fabric_close(fid_t fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_fabric *fab;
 	fab = container_of(fid, struct zhpe_offloaded_fabric, fab_fid.fid);
 	if (atm_load_rlx(&fab->ref))
@@ -325,6 +340,7 @@ static int zhpe_offloaded_fabric_close(fid_t fid)
 
 static int zhpe_offloaded_fabric_ext_lookup(const char *url, void **sa, size_t *sa_len)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = -FI_EINVAL;
 	const char		fam_pfx[] = "zhpe_offloaded:///fam";
 	const size_t		fam_pfx_len = strlen(fam_pfx);
@@ -381,6 +397,7 @@ static struct fi_zhpe_offloaded_ext_ops_v1 zhpe_offloaded_fabric_ext_ops_v1 = {
 static int zhpe_offloaded_fabric_ops_open(struct fid *fid, const char *ops_name,
 				uint64_t flags, void **ops, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 
 	if (!fid || fid->fclass != FI_CLASS_FABRIC ||
@@ -408,6 +425,7 @@ static struct fi_ops zhpe_offloaded_fab_fi_ops = {
 
 static void zhpe_offloaded_read_default_params()
 {
+    PRINT_DEBUG_LIBFAB;
 	if (!read_default_params) {
 		fi_param_get_int(&zhpe_offloaded_prov, "pe_waittime", &zhpe_offloaded_pe_waittime);
 		fi_param_get_int(&zhpe_offloaded_prov, "max_conn_retry",
@@ -436,6 +454,7 @@ static void zhpe_offloaded_read_default_params()
 static int zhpe_offloaded_fabric(struct fi_fabric_attr *attr,
 		       struct fid_fabric **fabric, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_fabric *fab;
 
 	fab = calloc(1, sizeof(*fab));
@@ -458,6 +477,7 @@ static int zhpe_offloaded_fabric(struct fi_fabric_attr *attr,
 
 static int zhpe_offloaded_fi_checkinfo(struct fi_info *info, const struct fi_info *hints)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (hints && hints->domain_attr && hints->domain_attr->name &&
             strcmp(info->domain_attr->name, hints->domain_attr->name))
 		return -FI_ENODATA;
@@ -472,6 +492,7 @@ static int zhpe_offloaded_fi_checkinfo(struct fi_info *info, const struct fi_inf
 static bool hints_addr_valid(const struct fi_info *hints,
 			     const void *addr, size_t addr_len)
 {
+    PRINT_DEBUG_LIBFAB;
 	const union sockaddr_in46 *sa = addr;
 
 	if (hints->addr_format == FI_SOCKADDR_IN6) {
@@ -488,6 +509,7 @@ static int zhpe_offloaded_ep_getinfo(uint32_t api_version, const char *node,
 			   const struct fi_info *hints,
 			   enum fi_ep_type ep_type, struct fi_info **info)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct addrinfo		*rai = NULL;
 	union sockaddr_in46	*src_addr = NULL;
@@ -574,6 +596,7 @@ static inline int do_ep_getinfo(uint32_t api_version, const char *node,
 				struct fi_info **info, struct fi_info **tail,
 				enum fi_ep_type ep_type)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct fi_info		*cur;
 
@@ -596,6 +619,7 @@ static int zhpe_offloaded_node_getinfo(uint32_t api_version, const char *node,
 			     uint64_t flags, const struct fi_info *hints,
 			     struct fi_info **info, struct fi_info **tail)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	enum fi_ep_type		ep_type;
 
@@ -641,6 +665,7 @@ static int zhpe_offloaded_getinfo(uint32_t api_version, const char *node,
 			uint64_t flags, const struct fi_info *hints,
 			struct fi_info **info)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct fi_info		*tail;
 
@@ -671,6 +696,7 @@ static int zhpe_offloaded_getinfo(uint32_t api_version, const char *node,
 
 static void fi_zhpe_offloaded_fini(void)
 {
+    PRINT_DEBUG_LIBFAB;
 	fastlock_destroy(&zhpe_offloaded_list_lock);
 }
 

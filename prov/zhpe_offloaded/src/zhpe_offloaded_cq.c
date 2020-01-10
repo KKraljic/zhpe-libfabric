@@ -39,6 +39,7 @@
 
 void zhpe_offloaded_cq_add_tx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_tx_ctx	*curr_ctx;
 
 	fastlock_acquire(&cq->list_lock);
@@ -55,6 +56,7 @@ out:
 
 void zhpe_offloaded_cq_remove_tx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	fastlock_acquire(&cq->list_lock);
 	dlist_remove(&tx_ctx->cq_lentry);
 	atm_dec(&cq->ref);
@@ -63,6 +65,7 @@ void zhpe_offloaded_cq_remove_tx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_o
 
 void zhpe_offloaded_cq_add_rx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_rx_ctx	*curr_ctx;
 
 	fastlock_acquire(&cq->list_lock);
@@ -79,6 +82,7 @@ out:
 
 void zhpe_offloaded_cq_remove_rx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	fastlock_acquire(&cq->list_lock);
 	dlist_remove(&rx_ctx->cq_lentry);
 	atm_dec(&cq->ref);
@@ -87,6 +91,7 @@ void zhpe_offloaded_cq_remove_rx_ctx(struct zhpe_offloaded_cq *cq, struct zhpe_o
 
 int zhpe_offloaded_cq_progress(struct zhpe_offloaded_cq *cq)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_tx_ctx	*tx_ctx;
 	struct zhpe_offloaded_rx_ctx	*rx_ctx;
 
@@ -116,6 +121,7 @@ int zhpe_offloaded_cq_progress(struct zhpe_offloaded_cq *cq)
 
 static ssize_t zhpe_offloaded_cq_entry_size(struct zhpe_offloaded_cq *zhpe_offloaded_cq)
 {
+    PRINT_DEBUG_LIBFAB;
 	ssize_t size;
 
 	switch (zhpe_offloaded_cq->attr.format) {
@@ -147,6 +153,7 @@ static ssize_t zhpe_offloaded_cq_entry_size(struct zhpe_offloaded_cq *zhpe_offlo
 static ssize_t _zhpe_offloaded_cq_write(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 			      const void *buf, size_t len)
 {
+    PRINT_DEBUG_LIBFAB;
 	ssize_t ret;
 	struct zhpe_offloaded_cq_overflow_entry_t *overflow_entry;
 
@@ -189,6 +196,7 @@ out:
 static int zhpe_offloaded_cq_report_context(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 				  struct fi_cq_tagged_entry *tcqe)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_cq_entry	cq_entry;
 
 	cq_entry.op_context = tcqe->op_context;
@@ -198,6 +206,7 @@ static int zhpe_offloaded_cq_report_context(struct zhpe_offloaded_cq *cq, fi_add
 
 static uint64_t zhpe_offloaded_cq_sanitize_flags(uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	return (flags & (FI_SEND | FI_RECV | FI_RMA | FI_ATOMIC |
 			 FI_MSG | FI_TAGGED | FI_READ | FI_WRITE |
 			 FI_REMOTE_READ | FI_REMOTE_WRITE |
@@ -207,6 +216,7 @@ static uint64_t zhpe_offloaded_cq_sanitize_flags(uint64_t flags)
 static int zhpe_offloaded_cq_report_msg(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 			      struct fi_cq_tagged_entry *tcqe)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_cq_msg_entry	cq_entry;
 
 	cq_entry.op_context = tcqe->op_context;
@@ -219,6 +229,7 @@ static int zhpe_offloaded_cq_report_msg(struct zhpe_offloaded_cq *cq, fi_addr_t 
 static int zhpe_offloaded_cq_report_data(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 			       struct fi_cq_tagged_entry *tcqe)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_cq_data_entry	cq_entry;
 
 	cq_entry.op_context = tcqe->op_context;
@@ -233,6 +244,7 @@ static int zhpe_offloaded_cq_report_data(struct zhpe_offloaded_cq *cq, fi_addr_t
 static int zhpe_offloaded_cq_report_tagged(struct zhpe_offloaded_cq *cq, fi_addr_t addr,
 				 struct fi_cq_tagged_entry *tcqe)
 {
+    PRINT_DEBUG_LIBFAB;
 	tcqe->flags = zhpe_offloaded_cq_sanitize_flags(tcqe->flags);
 
 	return _zhpe_offloaded_cq_write(cq, addr, tcqe, sizeof(*tcqe));
@@ -240,6 +252,7 @@ static int zhpe_offloaded_cq_report_tagged(struct zhpe_offloaded_cq *cq, fi_addr
 
 static void zhpe_offloaded_cq_set_report_fn(struct zhpe_offloaded_cq *zhpe_offloaded_cq)
 {
+    PRINT_DEBUG_LIBFAB;
 	switch (zhpe_offloaded_cq->attr.format) {
 	case FI_CQ_FORMAT_CONTEXT:
 		zhpe_offloaded_cq->report_completion = &zhpe_offloaded_cq_report_context;
@@ -266,6 +279,7 @@ static void zhpe_offloaded_cq_set_report_fn(struct zhpe_offloaded_cq *zhpe_offlo
 
 static inline void zhpe_offloaded_cq_copy_overflow_list(struct zhpe_offloaded_cq *cq, size_t count)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t i;
 	struct zhpe_offloaded_cq_overflow_entry_t *overflow_entry;
 
@@ -293,6 +307,7 @@ static inline ssize_t zhpe_offloaded_cq_rbuf_read(struct zhpe_offloaded_cq *cq, 
 					size_t count, fi_addr_t *src_addr,
 					size_t cq_entry_len)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t i;
 	fi_addr_t addr;
 
@@ -310,6 +325,7 @@ static ssize_t zhpe_offloaded_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t 
 				 fi_addr_t *src_addr, const void *cond,
 				 int timeout)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret = 0;
 	size_t threshold;
 	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
@@ -392,23 +408,27 @@ static ssize_t zhpe_offloaded_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t 
 static ssize_t zhpe_offloaded_cq_sread(struct fid_cq *cq, void *buf, size_t len,
 			     const void *cond, int timeout)
 {
+    PRINT_DEBUG_LIBFAB;
 	return zhpe_offloaded_cq_sreadfrom(cq, buf, len, NULL, cond, timeout);
 }
 
 static ssize_t zhpe_offloaded_cq_readfrom(struct fid_cq *cq, void *buf, size_t count,
 			fi_addr_t *src_addr)
 {
+    PRINT_DEBUG_LIBFAB;
 	return zhpe_offloaded_cq_sreadfrom(cq, buf, count, src_addr, NULL, 0);
 }
 
 static ssize_t zhpe_offloaded_cq_read(struct fid_cq *cq, void *buf, size_t count)
 {
+    PRINT_DEBUG_LIBFAB;
 	return zhpe_offloaded_cq_readfrom(cq, buf, count, NULL);
 }
 
 static ssize_t zhpe_offloaded_cq_readerr(struct fid_cq *cq, struct fi_cq_err_entry *buf,
 			       uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
 	ssize_t ret;
 	struct fi_cq_err_entry entry;
@@ -452,6 +472,7 @@ static ssize_t zhpe_offloaded_cq_readerr(struct fid_cq *cq, struct fi_cq_err_ent
 static const char *zhpe_offloaded_cq_strerror(struct fid_cq *cq, int prov_errno,
 			      const void *err_data, char *buf, size_t len)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (buf && len)
 		return strncpy(buf, fi_strerror(prov_errno), len);
 	return fi_strerror(prov_errno);
@@ -459,6 +480,7 @@ static const char *zhpe_offloaded_cq_strerror(struct fid_cq *cq, int prov_errno,
 
 static int zhpe_offloaded_cq_close(struct fid *fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cq *cq;
 
 	cq = container_of(fid, struct zhpe_offloaded_cq, cq_fid.fid);
@@ -482,6 +504,7 @@ static int zhpe_offloaded_cq_close(struct fid *fid)
 
 static int zhpe_offloaded_cq_signal(struct fid_cq *cq)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
 	zhpe_offloaded_cq = container_of(cq, struct zhpe_offloaded_cq, cq_fid);
 
@@ -505,6 +528,7 @@ static struct fi_ops_cq zhpe_offloaded_cq_ops = {
 
 static int zhpe_offloaded_cq_control(struct fid *fid, int command, void *arg)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cq *cq;
 	int ret = 0;
 
@@ -551,6 +575,7 @@ static struct fi_ops zhpe_offloaded_cq_fi_ops = {
 
 static int zhpe_offloaded_cq_verify_attr(struct fi_cq_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (!attr)
 		return 0;
 
@@ -596,6 +621,7 @@ static struct fi_cq_attr _zhpe_offloaded_cq_def_attr = {
 int zhpe_offloaded_cq_open(struct fid_domain *domain, struct fi_cq_attr *attr,
 		 struct fid_cq **cq, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain *zhpe_offloaded_dom;
 	struct zhpe_offloaded_cq *zhpe_offloaded_cq;
 	struct fi_wait_attr wait_attr;
@@ -714,6 +740,7 @@ int zhpe_offloaded_cq_report_error(struct zhpe_offloaded_cq *cq, struct fi_cq_ta
 			 size_t olen, int err, int prov_errno, void *err_data,
 			 size_t err_data_size)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct fi_cq_err_entry err_entry;
 

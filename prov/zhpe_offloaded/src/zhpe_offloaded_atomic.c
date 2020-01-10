@@ -43,6 +43,7 @@ ssize_t zhpe_offloaded_do_tx_atomic(struct fid_ep *ep,
 			  void **result_desc, size_t result_count,
 			  uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	ssize_t			ret = -FI_EINVAL;
 	int64_t			tindex = -1;
 	struct zhpe_offloaded_msg_hdr	hdr = { .op_type = ZHPE_OFFLOADED_OP_ATOMIC };
@@ -261,6 +262,7 @@ ssize_t zhpe_offloaded_do_tx_atomic(struct fid_ep *ep,
 static ssize_t zhpe_offloaded_ep_atomic_writemsg(struct fid_ep *ep,
 			const struct fi_msg_atomic *msg, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 #if ENABLE_DEBUG
 	switch (msg->op) {
 	case FI_MIN:
@@ -290,6 +292,7 @@ static ssize_t zhpe_offloaded_ep_atomic_write(struct fid_ep *ep,
 				    uint64_t key, enum fi_datatype datatype,
 				    enum fi_op op, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_msg_atomic msg;
 	struct fi_ioc msg_iov;
 	struct fi_rma_ioc rma_iov;
@@ -322,6 +325,7 @@ static ssize_t zhpe_offloaded_ep_atomic_writev(struct fid_ep *ep,
 			enum fi_datatype datatype, enum fi_op op,
 			void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t i;
 	struct fi_msg_atomic msg;
 	struct fi_rma_ioc rma_iov;
@@ -354,6 +358,7 @@ static ssize_t zhpe_offloaded_ep_atomic_inject(struct fid_ep *ep, const void *bu
 				uint64_t key, enum fi_datatype datatype,
 				enum fi_op op)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_msg_atomic msg;
 	struct fi_ioc msg_iov;
 	struct fi_rma_ioc rma_iov;
@@ -383,6 +388,7 @@ static ssize_t zhpe_offloaded_ep_atomic_readwritemsg(struct fid_ep *ep,
 				struct fi_ioc *resultv, void **result_desc,
 				size_t result_count, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	switch (msg->op) {
 	case FI_MIN:
 	case FI_MAX:
@@ -414,6 +420,7 @@ static ssize_t zhpe_offloaded_ep_atomic_readwrite(struct fid_ep *ep,
 			enum fi_datatype datatype, enum fi_op op,
 			void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_msg_atomic msg;
 	struct fi_ioc msg_iov;
 	struct fi_rma_ioc rma_iov;
@@ -457,6 +464,7 @@ static ssize_t zhpe_offloaded_ep_atomic_readwritev(struct fid_ep *ep,
 			enum fi_datatype datatype, enum fi_op op,
 			void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_msg_atomic msg;
 	struct fi_rma_ioc rma_iov;
 
@@ -486,6 +494,7 @@ static ssize_t zhpe_offloaded_ep_atomic_compwritemsg(struct fid_ep *ep,
 			void **result_desc, size_t result_count,
 			uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	switch (msg->op) {
 	case FI_CSWAP:
 	case FI_CSWAP_NE:
@@ -514,6 +523,7 @@ static ssize_t zhpe_offloaded_ep_atomic_compwrite(struct fid_ep *ep,
 			enum fi_datatype datatype, enum fi_op op,
 			void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_msg_atomic msg;
 	struct fi_ioc msg_iov;
 	struct fi_rma_ioc rma_iov;
@@ -555,6 +565,7 @@ static ssize_t zhpe_offloaded_ep_atomic_compwritev(struct fid_ep *ep,
 			enum fi_datatype datatype, enum fi_op op,
 			void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_msg_atomic msg;
 	struct fi_rma_ioc rma_iov;
 
@@ -584,6 +595,7 @@ int zhpe_offloaded_query_atomic(struct fid_domain *domain,
 		      enum fi_datatype datatype, enum fi_op op,
 		      struct fi_atomic_attr *attr, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 
 	ret = ofi_atomic_valid(&zhpe_offloaded_prov, datatype, op, flags);
@@ -639,6 +651,7 @@ int zhpe_offloaded_query_atomic(struct fid_domain *domain,
 static int zhpe_offloaded_ep_atomic_valid(struct fid_ep *ep,
 		enum fi_datatype datatype, enum fi_op op, size_t *count)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_atomic_attr attr;
 	int ret;
 
@@ -652,6 +665,7 @@ static int zhpe_offloaded_ep_atomic_valid(struct fid_ep *ep,
 static int zhpe_offloaded_ep_atomic_fetch_valid(struct fid_ep *ep,
 		enum fi_datatype datatype, enum fi_op op, size_t *count)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_atomic_attr attr;
 	int ret;
 
@@ -664,6 +678,7 @@ static int zhpe_offloaded_ep_atomic_fetch_valid(struct fid_ep *ep,
 static int zhpe_offloaded_ep_atomic_cswap_valid(struct fid_ep *ep,
 		enum fi_datatype datatype, enum fi_op op, size_t *count)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_atomic_attr attr;
 	int ret;
 

@@ -73,6 +73,7 @@ const struct fi_rx_attr zhpe_offloaded_rdm_rx_attr = {
 
 static int zhpe_offloaded_rdm_verify_rx_attr(const struct fi_rx_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpeq_attr	zattr;
 
@@ -118,6 +119,7 @@ static int zhpe_offloaded_rdm_verify_rx_attr(const struct fi_rx_attr *attr)
 
 static int zhpe_offloaded_rdm_verify_tx_attr(const struct fi_tx_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpeq_attr	zattr;
 
@@ -165,6 +167,7 @@ int zhpe_offloaded_rdm_verify_ep_attr(struct fi_ep_attr *ep_attr,
 			    struct fi_tx_attr *tx_attr,
 			    struct fi_rx_attr *rx_attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 
 	if (ep_attr) {
@@ -236,6 +239,7 @@ int zhpe_offloaded_rdm_fi_info(uint32_t version,
 		     const union sockaddr_in46 *dest_addr,
 		     const struct fi_info *hints, struct fi_info **info)
 {
+    PRINT_DEBUG_LIBFAB;
 	*info = zhpe_offloaded_fi_info(version, hints, src_addr, dest_addr,
 			     ZHPE_OFFLOADED_EP_RDM_CAP, ZHPE_OFFLOADED_MODE,
 			     &zhpe_offloaded_rdm_ep_attr, &zhpe_offloaded_rdm_tx_attr,
@@ -247,6 +251,7 @@ int zhpe_offloaded_rdm_fi_info(uint32_t version,
 static int zhpe_offloaded_rdm_endpoint(struct fid_domain *domain, struct fi_info *info,
 		struct zhpe_offloaded_ep **ep, void *context, size_t fclass)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 
 	if (info) {
@@ -275,6 +280,7 @@ static int zhpe_offloaded_rdm_endpoint(struct fid_domain *domain, struct fi_info
 int zhpe_offloaded_rdm_ep(struct fid_domain *domain, struct fi_info *info,
 		struct fid_ep **ep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_ep *endpoint;
 
@@ -289,6 +295,7 @@ int zhpe_offloaded_rdm_ep(struct fid_domain *domain, struct fi_info *info,
 int zhpe_offloaded_rdm_sep(struct fid_domain *domain, struct fi_info *info,
 		 struct fid_ep **sep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_ep *endpoint;
 

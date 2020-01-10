@@ -44,7 +44,7 @@
 
 
 void zhpe_offloaded_conn_list_destroy(struct zhpe_offloaded_ep_attr *ep_attr)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_conn	*conn;
 
 	/* Called only during ep teardown. No locking. */
@@ -59,7 +59,7 @@ void zhpe_offloaded_conn_list_destroy(struct zhpe_offloaded_ep_attr *ep_attr)
 void zhpe_offloaded_conn_release_entry(struct zhpe_offloaded_ep_attr *ep_attr,
 			     struct zhpe_offloaded_conn *conn)
 
-{
+{PRINT_DEBUG_LIBFAB;
 	mutex_lock(&ep_attr->conn_mutex);
 	assert(conn->state != ZHPE_OFFLOADED_CONN_STATE_READY);
 	dlist_remove_init(&conn->ep_lentry);
@@ -72,7 +72,7 @@ void zhpe_offloaded_conn_release_entry(struct zhpe_offloaded_ep_attr *ep_attr,
 struct zhpe_offloaded_conn *zhpe_offloaded_conn_insert(struct zhpe_offloaded_ep_attr *ep_attr,
 				   const union sockaddr_in46 *addr,
 				   bool local)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_conn	*conn;
 
 	conn = calloc_cachealigned(1, sizeof(*conn));
@@ -96,7 +96,7 @@ struct zhpe_offloaded_conn *zhpe_offloaded_conn_insert(struct zhpe_offloaded_ep_
 struct zhpe_offloaded_conn *zhpe_offloaded_conn_lookup(struct zhpe_offloaded_ep_attr *ep_attr,
 				   const union sockaddr_in46 *addr,
 				   bool local)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_conn	*ret;
 
 	dlist_foreach_container(&ep_attr->conn_list, struct zhpe_offloaded_conn,
@@ -114,7 +114,7 @@ struct zhpe_offloaded_conn *zhpe_offloaded_conn_lookup(struct zhpe_offloaded_ep_
 }
 
 int zhpe_offloaded_set_sockopt_reuseaddr(int sock)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	int			optval = 1;
 
@@ -128,7 +128,7 @@ int zhpe_offloaded_set_sockopt_reuseaddr(int sock)
 }
 
 int zhpe_offloaded_set_sockopt_nodelay(int sock)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	int			optval = 1;
 
@@ -143,7 +143,7 @@ int zhpe_offloaded_set_sockopt_nodelay(int sock)
 }
 
 int zhpe_offloaded_set_fd_cloexec(int fd)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	int			flags;
 
@@ -164,7 +164,7 @@ int zhpe_offloaded_set_fd_cloexec(int fd)
 }
 
 int zhpe_offloaded_set_fd_nonblock(int fd)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret;
 
 	ret = fi_fd_nonblock(fd);
@@ -176,7 +176,7 @@ int zhpe_offloaded_set_fd_nonblock(int fd)
 }
 
 int zhpe_offloaded_set_sockopts_connect(int sock)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret;
 
 	ret = zhpe_offloaded_set_sockopt_reuseaddr(sock);
@@ -195,7 +195,7 @@ int zhpe_offloaded_set_sockopts_connect(int sock)
 }
 
 int zhpe_offloaded_set_sockopts_listen(int sock)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret;
 
 	ret = zhpe_offloaded_set_sockopt_reuseaddr(sock);
@@ -207,7 +207,7 @@ int zhpe_offloaded_set_sockopts_listen(int sock)
 }
 
 int zhpe_offloaded_set_sockopts_accept(int sock)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret;
 
 	ret = zhpe_offloaded_set_sockopt_nodelay(sock);
@@ -351,7 +351,7 @@ err:
 
 int zhpe_offloaded_listen(const struct fi_info *info,
 		union sockaddr_in46 *ep_addr, int backlog)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	int			listen_fd = -1;
 	socklen_t		addr_len;
@@ -423,7 +423,7 @@ int zhpe_offloaded_listen(const struct fi_info *info,
 }
 
 int zhpe_offloaded_conn_listen(struct zhpe_offloaded_ep_attr *ep_attr)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpe_offloaded_conn_listener *listener = &ep_attr->listener;
 
@@ -465,7 +465,7 @@ int zhpe_offloaded_conn_listen(struct zhpe_offloaded_ep_attr *ep_attr)
 }
 
 int zhpe_offloaded_ep_connect(struct zhpe_offloaded_ep_attr *ep_attr, struct zhpe_offloaded_conn *conn)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	int			conn_fd = -1;
 	uint8_t			action;
@@ -524,7 +524,7 @@ int zhpe_offloaded_ep_connect(struct zhpe_offloaded_ep_attr *ep_attr, struct zhp
 }
 
 struct addrinfo *zhpe_offloaded_findaddrinfo(struct addrinfo *res, int family)
-{
+{PRINT_DEBUG_LIBFAB;
 	for (; res; res = res->ai_next) {
 		if (res->ai_family == family)
 			return res;
@@ -534,7 +534,7 @@ struct addrinfo *zhpe_offloaded_findaddrinfo(struct addrinfo *res, int family)
 }
 
 void zhpe_offloaded_getaddrinfo_hints_init(struct addrinfo *hints, int family)
-{
+{PRINT_DEBUG_LIBFAB;
 	memset(hints, 0, sizeof(*hints));
 	hints->ai_socktype = SOCK_STREAM;
 	hints->ai_flags = AI_ADDRCONFIG;
@@ -543,7 +543,7 @@ void zhpe_offloaded_getaddrinfo_hints_init(struct addrinfo *hints, int family)
 
 int zhpe_offloaded_getaddrinfo(const char *node, const char *service,
 		     struct addrinfo *hints, struct addrinfo **res)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	int			rc;
 
@@ -597,7 +597,7 @@ int zhpe_offloaded_getaddrinfo(const char *node, const char *service,
 }
 
 int zhpe_offloaded_gethostaddr(sa_family_t family, union sockaddr_in46 *addr)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct addrinfo		ai;
 	struct addrinfo		*rai;
@@ -650,7 +650,7 @@ int zhpe_offloaded_gethostaddr(sa_family_t family, union sockaddr_in46 *addr)
 
 int zhpe_offloaded_checklocaladdr(const struct ifaddrs *ifaddrs,
 			const union sockaddr_in46 *addr)
-{
+{PRINT_DEBUG_LIBFAB;
 	int			ret = 1;
 	struct ifaddrs		*ifaddrs_local = NULL;
 	const struct ifaddrs	*ifa;

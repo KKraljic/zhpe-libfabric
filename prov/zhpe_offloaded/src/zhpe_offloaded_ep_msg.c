@@ -74,6 +74,7 @@ static const struct fi_rx_attr zhpe_offloaded_msg_rx_attr = {
 
 static int zhpe_offloaded_msg_verify_rx_attr(const struct fi_rx_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpeq_attr	zattr;
 
@@ -104,6 +105,7 @@ static int zhpe_offloaded_msg_verify_rx_attr(const struct fi_rx_attr *attr)
 
 static int zhpe_offloaded_msg_verify_tx_attr(const struct fi_tx_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpeq_attr	zattr;
 
@@ -139,6 +141,7 @@ int zhpe_offloaded_msg_verify_ep_attr(struct fi_ep_attr *ep_attr,
 			    struct fi_tx_attr *tx_attr,
 			    struct fi_rx_attr *rx_attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (ep_attr) {
 
 		switch (ep_attr->protocol) {
@@ -195,6 +198,7 @@ int zhpe_offloaded_msg_fi_info(uint32_t version,
 		     const union sockaddr_in46 *dest_addr,
 		     const struct fi_info *hints, struct fi_info **info)
 {
+    PRINT_DEBUG_LIBFAB;
 	*info = zhpe_offloaded_fi_info(version, hints, src_addr, dest_addr,
 			     ZHPE_OFFLOADED_EP_MSG_CAP, ZHPE_OFFLOADED_MODE,
 			     &zhpe_offloaded_msg_ep_attr, &zhpe_offloaded_msg_tx_attr,
@@ -205,6 +209,7 @@ int zhpe_offloaded_msg_fi_info(uint32_t version,
 
 static int zhpe_offloaded_ep_cm_getname(fid_t fid, void *addr, size_t *addrlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t		        len = *addrlen;
 	union sockaddr_in46	*src_addr;
 	struct zhpe_offloaded_ep		*zhpe_offloaded_ep;
@@ -251,6 +256,7 @@ static int zhpe_offloaded_ep_cm_getname(fid_t fid, void *addr, size_t *addrlen)
 
 static int zhpe_offloaded_pep_create_listener(struct zhpe_offloaded_pep *pep)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 
 	ret = zhpe_offloaded_listen(&pep->info, &pep->src_addr, zhpe_offloaded_cm_def_map_sz);
@@ -264,6 +270,7 @@ static int zhpe_offloaded_pep_create_listener(struct zhpe_offloaded_pep *pep)
 
 static int zhpe_offloaded_ep_cm_setname(fid_t fid, void *addr, size_t addrlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	union sockaddr_in46	*sa = addr;
 	struct zhpe_offloaded_ep		*zhpe_offloaded_ep;
 	struct zhpe_offloaded_pep		*zhpe_offloaded_pep;
@@ -298,6 +305,7 @@ static int zhpe_offloaded_ep_cm_setname(fid_t fid, void *addr, size_t addrlen)
 
 static int zhpe_offloaded_ep_cm_getpeer(struct fid_ep *ep, void *addr, size_t *addrlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	size_t			len = *addrlen;
 	struct zhpe_offloaded_ep		*zhpe_offloaded_ep;
 	union sockaddr_in46	*dest_addr;
@@ -315,6 +323,7 @@ static int zhpe_offloaded_ep_cm_getpeer(struct fid_ep *ep, void *addr, size_t *a
 
 static int zhpe_offloaded_cm_send(int fd, const void *buf, int len)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret, done = 0;
 
 	while (done != len) {
@@ -332,6 +341,7 @@ static int zhpe_offloaded_cm_send(int fd, const void *buf, int len)
 
 static int zhpe_offloaded_cm_recv(int fd, void *buf, int len)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret, done = 0;
 	while (done != len) {
 		ret = recv(fd, (char*) buf + done, len - done, 0);
@@ -348,6 +358,7 @@ static int zhpe_offloaded_cm_recv(int fd, void *buf, int len)
 
 static void zhpe_offloaded_ep_wait_shutdown(struct zhpe_offloaded_ep *ep)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret, do_report = 0;
 	char tmp = 0;
 	struct pollfd poll_fds[2];
@@ -400,6 +411,7 @@ static void zhpe_offloaded_ep_wait_shutdown(struct zhpe_offloaded_ep *ep)
 static void zhpe_offloaded_ep_cm_report_connect_fail(struct zhpe_offloaded_ep *ep,
 					   void *param, size_t paramlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	ZHPE_OFFLOADED_LOG_DBG("reporting FI_REJECT\n");
 	if (zhpe_offloaded_eq_report_error(ep->attr->eq, &ep->ep.fid, NULL, 0,
 				 FI_ECONNREFUSED, -FI_ECONNREFUSED,
@@ -409,6 +421,7 @@ static void zhpe_offloaded_ep_cm_report_connect_fail(struct zhpe_offloaded_ep *e
 
 static void *zhpe_offloaded_ep_cm_connect_handler(void *data)
 {
+    PRINT_DEBUG_LIBFAB;
 	int zhpe_offloaded_fd, ret;
 	struct zhpe_offloaded_conn_req_handle *handle = data;
 	struct zhpe_offloaded_conn_req *req = handle->req;
@@ -494,6 +507,7 @@ out:
 static int zhpe_offloaded_ep_cm_connect(struct fid_ep *ep, const void *addr,
 			      const void *param, size_t paramlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_conn_req *req = NULL;
 	struct zhpe_offloaded_conn_req_handle *handle = NULL;
 	struct zhpe_offloaded_ep *_ep;
@@ -552,6 +566,7 @@ out:
 
 static void *zhpe_offloaded_cm_accept_handler(void *data)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_conn_hdr reply;
 	struct zhpe_offloaded_conn_req_handle *hreq = data;
@@ -594,6 +609,7 @@ static void *zhpe_offloaded_cm_accept_handler(void *data)
 
 static int zhpe_offloaded_ep_cm_accept(struct fid_ep *ep, const void *param, size_t paramlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_conn_req_handle *handle;
 	struct zhpe_offloaded_ep *_ep;
 
@@ -637,6 +653,7 @@ static int zhpe_offloaded_ep_cm_accept(struct fid_ep *ep, const void *param, siz
 
 static int zhpe_offloaded_ep_cm_shutdown(struct fid_ep *ep, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_ep *_ep;
 	struct fi_eq_cm_entry cm_entry = {0};
 	struct zhpe_offloaded_conn_hdr msg = {0};
@@ -680,6 +697,7 @@ struct fi_ops_cm zhpe_offloaded_ep_cm_ops = {
 static int zhpe_offloaded_msg_endpoint(struct fid_domain *domain, struct fi_info *info,
 		struct zhpe_offloaded_ep **ep, void *context, size_t fclass)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_pep *pep;
 
@@ -717,6 +735,7 @@ static int zhpe_offloaded_msg_endpoint(struct fid_domain *domain, struct fi_info
 int zhpe_offloaded_msg_ep(struct fid_domain *domain, struct fi_info *info,
 		struct fid_ep **ep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_ep *endpoint;
 
@@ -730,6 +749,7 @@ int zhpe_offloaded_msg_ep(struct fid_domain *domain, struct fi_info *info,
 
 static int zhpe_offloaded_pep_fi_bind(fid_t fid, struct fid *bfid, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_pep *pep;
 	struct zhpe_offloaded_eq *eq;
 
@@ -749,6 +769,7 @@ static int zhpe_offloaded_pep_fi_bind(fid_t fid, struct fid *bfid, uint64_t flag
 
 static int zhpe_offloaded_pep_fi_close(fid_t fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	char c = 0;
 	struct zhpe_offloaded_pep *pep;
@@ -783,6 +804,7 @@ static struct fi_ops zhpe_offloaded_pep_fi_ops = {
 static struct fi_info *zhpe_offloaded_ep_msg_get_info(struct zhpe_offloaded_pep *pep,
 					    struct zhpe_offloaded_conn_req *req)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_info hints;
 	uint64_t requested, supported;
 
@@ -804,6 +826,7 @@ static struct fi_info *zhpe_offloaded_ep_msg_get_info(struct zhpe_offloaded_pep 
 
 static void *zhpe_offloaded_pep_req_handler(void *data)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret, entry_sz;
 	struct fi_info *info;
 	struct zhpe_offloaded_conn_req *conn_req = NULL;
@@ -878,6 +901,7 @@ err:
 
 static void zhpe_offloaded_pep_check_msg_list(struct zhpe_offloaded_pep *pep)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct dlist_entry *entry;
 	struct zhpe_offloaded_conn_req_handle *hreq;
 	struct zhpe_offloaded_conn_hdr reply;
@@ -915,6 +939,7 @@ static void zhpe_offloaded_pep_check_msg_list(struct zhpe_offloaded_pep *pep)
 
 static void *zhpe_offloaded_pep_listener_thread(void *data)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_pep *pep = (struct zhpe_offloaded_pep *) data;
 	struct zhpe_offloaded_conn_req_handle *handle = NULL;
 	struct pollfd poll_fds[2];
@@ -977,6 +1002,7 @@ static void *zhpe_offloaded_pep_listener_thread(void *data)
 
 static int zhpe_offloaded_pep_start_listener_thread(struct zhpe_offloaded_pep *pep)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (pthread_create(&pep->cm.listener_thread, NULL,
 			   zhpe_offloaded_pep_listener_thread, (void *)pep)) {
 		ZHPE_OFFLOADED_LOG_ERROR("Couldn't create listener thread\n");
@@ -988,6 +1014,7 @@ static int zhpe_offloaded_pep_start_listener_thread(struct zhpe_offloaded_pep *p
 
 static int zhpe_offloaded_pep_listen(struct fid_pep *pep)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_pep *_pep;
 	_pep = container_of(pep, struct zhpe_offloaded_pep, pep);
 	if (_pep->cm.listener_thread)
@@ -1004,6 +1031,7 @@ static int zhpe_offloaded_pep_listen(struct fid_pep *pep)
 static int zhpe_offloaded_pep_reject(struct fid_pep *pep, fid_t handle,
 		const void *param, size_t paramlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_conn_req_handle *hreq;
 	struct zhpe_offloaded_conn_req *req;
 	struct zhpe_offloaded_pep *_pep;
@@ -1047,6 +1075,7 @@ static struct fi_ops_cm zhpe_offloaded_pep_cm_ops = {
 int zhpe_offloaded_pep_getopt(fid_t fid, int level, int optname,
 		      void *optval, size_t *optlen)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (level != FI_OPT_ENDPOINT || optname != FI_OPT_CM_DATA_SIZE)
 		return -FI_ENOPROTOOPT;
 
@@ -1072,6 +1101,7 @@ static struct fi_ops_ep zhpe_offloaded_pep_ops = {
 int zhpe_offloaded_msg_sep(struct fid_domain *domain, struct fi_info *info,
 		 struct fid_ep **sep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_ep *endpoint;
 
@@ -1086,6 +1116,7 @@ int zhpe_offloaded_msg_sep(struct fid_domain *domain, struct fi_info *info,
 int zhpe_offloaded_msg_passive_ep(struct fid_fabric *fabric, struct fi_info *info,
 			struct fid_pep **pep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct addrinfo		*rai = NULL;
 	struct addrinfo		ai;

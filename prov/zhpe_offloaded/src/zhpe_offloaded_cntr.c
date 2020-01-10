@@ -45,6 +45,7 @@ const struct fi_cntr_attr zhpe_offloaded_cntr_attr = {
 
 void zhpe_offloaded_cntr_add_tx_ctx(struct zhpe_offloaded_cntr *cntr, struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct fid *fid = &tx_ctx->ctx.fid;
 	ret = fid_list_insert(&cntr->tx_list, &cntr->list_lock, fid);
@@ -56,6 +57,7 @@ void zhpe_offloaded_cntr_add_tx_ctx(struct zhpe_offloaded_cntr *cntr, struct zhp
 
 void zhpe_offloaded_cntr_remove_tx_ctx(struct zhpe_offloaded_cntr *cntr, struct zhpe_offloaded_tx_ctx *tx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fid *fid = &tx_ctx->ctx.fid;
 
 	fid_list_remove(&cntr->tx_list, &cntr->list_lock, fid);
@@ -64,6 +66,7 @@ void zhpe_offloaded_cntr_remove_tx_ctx(struct zhpe_offloaded_cntr *cntr, struct 
 
 void zhpe_offloaded_cntr_add_rx_ctx(struct zhpe_offloaded_cntr *cntr, struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct fid *fid = &rx_ctx->ctx.fid;
 	ret = fid_list_insert(&cntr->rx_list, &cntr->list_lock, fid);
@@ -75,6 +78,7 @@ void zhpe_offloaded_cntr_add_rx_ctx(struct zhpe_offloaded_cntr *cntr, struct zhp
 
 void zhpe_offloaded_cntr_remove_rx_ctx(struct zhpe_offloaded_cntr *cntr, struct zhpe_offloaded_rx_ctx *rx_ctx)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fid *fid = &rx_ctx->ctx.fid;
 
 	fid_list_remove(&cntr->rx_list, &cntr->list_lock, fid);
@@ -82,7 +86,7 @@ void zhpe_offloaded_cntr_remove_rx_ctx(struct zhpe_offloaded_cntr *cntr, struct 
 }
 
 int zhpe_offloaded_cntr_progress(struct zhpe_offloaded_cntr *cntr)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_tx_ctx *tx_ctx;
 	struct zhpe_offloaded_rx_ctx *rx_ctx;
 
@@ -111,7 +115,7 @@ int zhpe_offloaded_cntr_progress(struct zhpe_offloaded_cntr *cntr)
 }
 
 void zhpe_offloaded_cntr_check_trigger_list(struct zhpe_offloaded_cntr *cntr)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_trigger	*trigger;
 	struct dlist_entry	*dentry;
 	struct dlist_entry	*dnext;
@@ -184,7 +188,7 @@ void zhpe_offloaded_cntr_check_trigger_list(struct zhpe_offloaded_cntr *cntr)
 }
 
 static uint64_t zhpe_offloaded_cntr_read(struct fid_cntr *fid_cntr)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cntr *cntr;
 	cntr = container_of(fid_cntr, struct zhpe_offloaded_cntr, cntr_fid);
 	zhpe_offloaded_cntr_progress(cntr);
@@ -192,7 +196,7 @@ static uint64_t zhpe_offloaded_cntr_read(struct fid_cntr *fid_cntr)
 }
 
 void zhpe_offloaded_cntr_inc(struct zhpe_offloaded_cntr *cntr)
-{
+{PRINT_DEBUG_LIBFAB;
 	mutex_lock(&cntr->mut);
 	atm_inc(&cntr->value);
 	if (atm_load_rlx(&cntr->num_waiting))
@@ -205,7 +209,7 @@ void zhpe_offloaded_cntr_inc(struct zhpe_offloaded_cntr *cntr)
 }
 
 static int zhpe_offloaded_cntr_add(struct fid_cntr *fid_cntr, uint64_t value)
-{
+{PRINT_DEBUG_LIBFAB;
 	uint64_t new_val;
 	struct zhpe_offloaded_cntr *cntr;
 	cntr = container_of(fid_cntr, struct zhpe_offloaded_cntr, cntr_fid);
@@ -224,7 +228,7 @@ static int zhpe_offloaded_cntr_add(struct fid_cntr *fid_cntr, uint64_t value)
 }
 
 static int zhpe_offloaded_cntr_set(struct fid_cntr *fid_cntr, uint64_t value)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cntr *cntr;
 	cntr = container_of(fid_cntr, struct zhpe_offloaded_cntr, cntr_fid);
 
@@ -242,7 +246,7 @@ static int zhpe_offloaded_cntr_set(struct fid_cntr *fid_cntr, uint64_t value)
 }
 
 static int zhpe_offloaded_cntr_adderr(struct fid_cntr *fid_cntr, uint64_t value)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cntr *cntr;
 	cntr = container_of(fid_cntr, struct zhpe_offloaded_cntr, cntr_fid);
 
@@ -259,7 +263,7 @@ static int zhpe_offloaded_cntr_adderr(struct fid_cntr *fid_cntr, uint64_t value)
 }
 
 static int zhpe_offloaded_cntr_seterr(struct fid_cntr *fid_cntr, uint64_t value)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cntr *cntr;
 
 	cntr = container_of(fid_cntr, struct zhpe_offloaded_cntr, cntr_fid);
@@ -278,7 +282,7 @@ static int zhpe_offloaded_cntr_seterr(struct fid_cntr *fid_cntr, uint64_t value)
 
 static int zhpe_offloaded_cntr_wait(struct fid_cntr *fid_cntr, uint64_t threshold,
 			  int timeout)
-{
+{PRINT_DEBUG_LIBFAB;
 	int last_read, ret = 0;
 	uint64_t start_ms = 0, end_ms = 0, remaining_ms = 0;
 	struct zhpe_offloaded_cntr *cntr;
@@ -344,7 +348,7 @@ out:
 }
 
 static int zhpe_offloaded_cntr_control(struct fid *fid, int command, void *arg)
-{
+{PRINT_DEBUG_LIBFAB;
 	int ret = 0;
 	struct zhpe_offloaded_cntr *cntr;
 
@@ -391,7 +395,7 @@ static int zhpe_offloaded_cntr_control(struct fid *fid, int command, void *arg)
 }
 
 static int zhpe_offloaded_cntr_close(struct fid *fid)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cntr *cntr;
 
 	cntr = container_of(fid, struct zhpe_offloaded_cntr, cntr_fid.fid);
@@ -412,7 +416,7 @@ static int zhpe_offloaded_cntr_close(struct fid *fid)
 }
 
 static uint64_t zhpe_offloaded_cntr_readerr(struct fid_cntr *cntr)
-{
+{PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_cntr *_cntr;
 	_cntr = container_of(cntr, struct zhpe_offloaded_cntr, cntr_fid);
 	if (_cntr->domain->progress_mode == FI_PROGRESS_MANUAL)
@@ -442,7 +446,7 @@ static struct fi_ops zhpe_offloaded_cntr_fi_ops = {
 };
 
 static int zhpe_offloaded_cntr_verify_attr(struct fi_cntr_attr *attr)
-{
+{PRINT_DEBUG_LIBFAB;
 	switch (attr->events) {
 	case FI_CNTR_EVENTS_COMP:
 		break;
@@ -467,7 +471,7 @@ static int zhpe_offloaded_cntr_verify_attr(struct fi_cntr_attr *attr)
 
 int zhpe_offloaded_cntr_open(struct fid_domain *domain, struct fi_cntr_attr *attr,
 		   struct fid_cntr **cntr, void *context)
-{
+{PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_domain *dom;
 	struct zhpe_offloaded_cntr *_cntr;

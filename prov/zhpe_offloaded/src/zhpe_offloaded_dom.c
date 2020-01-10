@@ -63,6 +63,7 @@ const struct fi_domain_attr zhpe_offloaded_domain_attr = {
 
 int zhpe_offloaded_verify_domain_attr(uint32_t api_version, const struct fi_info *info)
 {
+    PRINT_DEBUG_LIBFAB;
 	const struct fi_domain_attr *attr = info->domain_attr;
 	int			rc;
 
@@ -166,6 +167,7 @@ int zhpe_offloaded_verify_domain_attr(uint32_t api_version, const struct fi_info
 
 static int zhpe_offloaded_dom_close(struct fid *fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain *dom;
 
 	dom = container_of(fid, struct zhpe_offloaded_domain, dom_fid.fid);
@@ -190,6 +192,7 @@ static int zhpe_offloaded_dom_close(struct fid *fid)
 
 int zhpe_offloaded_zmr_put_uncached(struct zhpe_offloaded_mr *zmr)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain	*domain;
 	struct zhpe_offloaded_kexp_data	*kexp;
 	RbtIterator		*rbt;
@@ -233,6 +236,7 @@ int zhpe_offloaded_zmr_put_uncached(struct zhpe_offloaded_mr *zmr)
 
 int zhpe_offloaded_mr_close(struct fid *fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	return zhpe_offloaded_mr_put(container_of(fid, struct zhpe_offloaded_mr, mr_fid.fid));
 }
 
@@ -251,6 +255,7 @@ static struct zhpe_offloaded_mr_ops zmr_ops_uncached = {
 struct zhpe_offloaded_mr *zhpe_offloaded_mr_find(struct zhpe_offloaded_domain *domain,
 			     const struct zhpe_offloaded_key *zkey)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_mr		*ret = NULL;
 	RbtIterator		*rbt;
 
@@ -269,6 +274,7 @@ int zhpe_offloaded_zmr_reg(struct zhpe_offloaded_domain *domain, const void *buf
 		 size_t len, uint32_t qaccess, uint64_t key,
 		 struct zhpe_offloaded_mr *zmr, struct zhpe_offloaded_mr_ops *ops)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	RbtIterator		*rbt;
 
@@ -311,6 +317,7 @@ int zhpe_offloaded_mr_reg_int_uncached(struct zhpe_offloaded_domain *domain, con
 			     size_t len, uint64_t access, uint32_t qaccess,
 			     struct fid_mr **mr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpe_offloaded_mr		*zmr;
 
@@ -336,6 +343,7 @@ int zhpe_offloaded_mr_reg_int_uncached(struct zhpe_offloaded_domain *domain, con
 int zhpe_offloaded_mr_reg_int_iov(struct zhpe_offloaded_domain *domain,
 			struct zhpe_offloaded_iov_state *lstate)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = 0;
 	struct zhpe_offloaded_iov		*liov = lstate->viov;
 	uint8_t			missing = lstate->missing;
@@ -366,6 +374,7 @@ int zhpe_offloaded_mr_reg_int_iov(struct zhpe_offloaded_domain *domain,
 static int zhpe_offloaded_regattr(struct fid *fid, const struct fi_mr_attr *attr,
 			uint64_t flags, struct fid_mr **mr)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret = -FI_EINVAL;
 	uint32_t		qaccess = 0;
 	struct zhpe_offloaded_domain	*domain;
@@ -425,6 +434,7 @@ static int zhpe_offloaded_regv(struct fid *fid, const struct iovec *iov,
 		uint64_t offset, uint64_t requested_key,
 		uint64_t flags, struct fid_mr **mr, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_mr_attr	attr = {
 		attr.mr_iov	= iov,
 		attr.iov_count	= count,
@@ -441,6 +451,7 @@ static int zhpe_offloaded_reg(struct fid *fid, const void *buf, size_t len,
 		    uint64_t access, uint64_t offset, uint64_t requested_key,
 		    uint64_t flags, struct fid_mr **mr, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct iovec		iov = {
 		iov.iov_base	= (void *)buf,
 		iov.iov_len	= len,
@@ -452,6 +463,7 @@ static int zhpe_offloaded_reg(struct fid *fid, const void *buf, size_t len,
 
 static int zhpe_offloaded_dom_bind(struct fid *fid, struct fid *bfid, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain *dom;
 	struct zhpe_offloaded_eq *eq;
 
@@ -470,6 +482,7 @@ static int zhpe_offloaded_dom_bind(struct fid *fid, struct fid *bfid, uint64_t f
 
 static int zhpe_offloaded_dom_ctrl(struct fid *fid, int command, void *arg)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_domain *dom;
 
 	dom = container_of(fid, struct zhpe_offloaded_domain, dom_fid.fid);
@@ -490,6 +503,7 @@ static int zhpe_offloaded_dom_ctrl(struct fid *fid, int command, void *arg)
 static int zhpe_offloaded_endpoint(struct fid_domain *domain, struct fi_info *info,
 			 struct fid_ep **ep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	switch (info->ep_attr->type) {
 	case FI_EP_RDM:
 		return zhpe_offloaded_rdm_ep(domain, info, ep, context);
@@ -503,6 +517,7 @@ static int zhpe_offloaded_endpoint(struct fid_domain *domain, struct fi_info *in
 static int zhpe_offloaded_scalable_ep(struct fid_domain *domain, struct fi_info *info,
 		     struct fid_ep **sep, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	/* FIXME: Scalable EP */
 	return -FI_ENOSYS;
 #if 0
@@ -548,6 +563,7 @@ static struct fi_ops_mr zhpe_offloaded_dom_mr_ops = {
 int zhpe_offloaded_domain(struct fid_fabric *fabric, struct fi_info *info,
 		struct fid_domain **dom, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int			ret;
 	struct zhpe_offloaded_domain	*zhpe_offloaded_domain;
 	struct zhpe_offloaded_fabric	*fab;

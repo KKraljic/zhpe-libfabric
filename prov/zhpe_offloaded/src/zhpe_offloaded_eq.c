@@ -55,6 +55,7 @@ static void zhpe_offloaded_eq_clean_err_data_list(struct zhpe_offloaded_eq *eq, 
 static ssize_t zhpe_offloaded_eq_sread(struct fid_eq *eq, uint32_t *event, void *buf,
 				size_t len, int timeout, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_eq *zhpe_offloaded_eq;
 	struct dlist_entry *list;
@@ -106,12 +107,14 @@ out:
 static ssize_t zhpe_offloaded_eq_read(struct fid_eq *eq, uint32_t *event, void *buf,
 				size_t len, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	return zhpe_offloaded_eq_sread(eq, event, buf, len, 0, flags);
 }
 
 static ssize_t zhpe_offloaded_eq_readerr(struct fid_eq *eq, struct fi_eq_err_entry *buf,
 			uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_eq *zhpe_offloaded_eq;
 	struct dlist_entry *list;
@@ -173,6 +176,7 @@ out:
 ssize_t zhpe_offloaded_eq_report_event(struct zhpe_offloaded_eq *zhpe_offloaded_eq, uint32_t event,
 			     const void *buf, size_t len, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_eq_entry *entry;
 
 	entry = calloc(1, len + sizeof(*entry));
@@ -196,6 +200,7 @@ ssize_t zhpe_offloaded_eq_report_error(struct zhpe_offloaded_eq *zhpe_offloaded_
 			     uint64_t data, int err, int prov_errno,
 			     void *err_data, size_t err_data_size)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct fi_eq_err_entry *err_entry;
 	struct zhpe_offloaded_eq_entry *entry;
 	struct zhpe_offloaded_eq_err_data_entry *err_data_entry;
@@ -241,6 +246,7 @@ ssize_t zhpe_offloaded_eq_report_error(struct zhpe_offloaded_eq *zhpe_offloaded_
 static ssize_t zhpe_offloaded_eq_write(struct fid_eq *eq, uint32_t event,
 			     const void *buf, size_t len, uint64_t flags)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_eq *zhpe_offloaded_eq;
 	int ret;
 
@@ -256,6 +262,7 @@ static ssize_t zhpe_offloaded_eq_write(struct fid_eq *eq, uint32_t event,
 static const char *zhpe_offloaded_eq_strerror(struct fid_eq *eq, int prov_errno,
 			      const void *err_data, char *buf, size_t len)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (buf && len)
 		return strncpy(buf, fi_strerror(-prov_errno), len);
 	return fi_strerror(-prov_errno);
@@ -272,6 +279,7 @@ static struct fi_ops_eq zhpe_offloaded_eq_ops = {
 
 static int zhpe_offloaded_eq_fi_close(struct fid *fid)
 {
+    PRINT_DEBUG_LIBFAB;
 	struct zhpe_offloaded_eq *zhpe_offloaded_eq;
 
 	zhpe_offloaded_eq = container_of(fid, struct zhpe_offloaded_eq, eq.fid);
@@ -291,6 +299,7 @@ static int zhpe_offloaded_eq_fi_close(struct fid *fid)
 
 static int zhpe_offloaded_eq_control(struct fid *fid, int command, void *arg)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret = 0;
 	struct zhpe_offloaded_eq *eq;
 
@@ -329,6 +338,7 @@ static struct fi_ops zhpe_offloaded_eq_fi_ops = {
 
 static int _zhpe_offloaded_eq_verify_attr(struct fi_eq_attr *attr)
 {
+    PRINT_DEBUG_LIBFAB;
 	if (!attr)
 		return 0;
 
@@ -359,6 +369,7 @@ static struct fi_eq_attr _zhpe_offloaded_eq_def_attr = {
 int zhpe_offloaded_eq_open(struct fid_fabric *fabric, struct fi_eq_attr *attr,
 		 struct fid_eq **eq, void *context)
 {
+    PRINT_DEBUG_LIBFAB;
 	int ret;
 	struct zhpe_offloaded_eq *zhpe_offloaded_eq;
 	struct fi_wait_attr wait_attr;

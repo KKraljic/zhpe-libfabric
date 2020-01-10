@@ -98,6 +98,8 @@
 
 #include <zhpe_offloaded_stats.h>
 
+#define PRINT_DEBUG_LIBFAB printf("zhpe-libfabric Within function: %s in file %s \n", __func__, __FILE__)
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
